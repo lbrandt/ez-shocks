@@ -3,13 +3,20 @@ function [ic1, chat,Fhat,eigval]=jln_nbplog(x,kmax,jj,DEMEAN)
 % Estimates number of factors according to some information criterion as in
 % Bai & Ng (2002) under asymptotic N,T.
 %
+% Information criteria
+%
+%
+% If demean == 0, do not transform, take raw data.
+% If demean == 1, demean data to (0, sigma).
+% If demean == 2, standardise data to (0, 1).
+%
 % (Bai & Ng, 2002)
 %
 %   Input
-%       x
-%       kmax
+%       x       Matrix of observed variables [T x N]
+%       kmax    Maximum number of factors to consider
 %       jj      Indicate which information criterion to use {1, .., 8}
-%       DEMEAN
+%       demean  Indicate transformation of data {0, 1, 2}
 %
 %   Output
 %       icl
@@ -79,7 +86,7 @@ end
 IC1 = zeros(size(CT,1),kmax+1);
 Sigma = zeros(1,kmax+1);
 
-if T< N
+if T < N
     [ev,eigval,ev1] = svd(X*X');
     sumeigval = cumsum(diag(eigval))/sum(diag(eigval));
     Fhat0 = sqrt(T)*ev;
@@ -94,7 +101,7 @@ end
 
 
 if jj <= 8
-    for i=kmax:-1:1
+    for i=kmax:-1:1 % count down from kmax
         Fhat=Fhat0(:,1:i);
         %lambda=Fhat'*X;
         lambda=Lambda0(:,1:i);
