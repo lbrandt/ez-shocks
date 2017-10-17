@@ -15,7 +15,7 @@ function [ic1, chat,Fhat,eigval]=jln_nbplog(x,kmax,jj,DEMEAN)
 %   Input
 %       x       Matrix of observed variables [T x N]
 %       kmax    Maximum number of factors to consider
-%       jj      Indicate which information criterion to use {1, .., 8}
+%       jj      Indicate which penalty term to use {1, .., 8}
 %       demean  Indicate transformation of data {0, 1, 2}
 %
 %   Output

@@ -41,15 +41,15 @@ CNT = min([sqrt(N), sqrt(T)]);
 
 
 % Transform data according to demean
-if demean ==2
+if demean == 2
     xt = standardize(x);
 end
 
-if demean ==1
+if demean == 1
     xt = x-repmat(mean(x),T,1);
 end
 
-if demean==0
+if demean == 0
     xt = x;
 end
 
