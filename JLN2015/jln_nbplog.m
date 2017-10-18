@@ -44,7 +44,7 @@ if jj ==1
 end
 
 if jj==2
-    CT(1,:)=(NT1/NT)*log(min([N;T]))*ii;
+    CT(1,:)=(NT1/NT)*log(min([N;T]))*ii; % p2
 end
 
 GCT=min([N;T]);
@@ -87,12 +87,12 @@ IC1 = zeros(size(CT,1),kmax+1);
 Sigma = zeros(1,kmax+1);
 
 if T < N
-    [ev,eigval,ev1] = svd(X*X');
+    [ev,eigval, ~] = svd(X*X');
     sumeigval = cumsum(diag(eigval))/sum(diag(eigval));
     Fhat0 = sqrt(T)*ev;
     Lambda0 = X'*Fhat0/T;
 else
-    [ev,eigval,ev1] = svd(X'*X);
+    [ev,eigval, ~] = svd(X'*X);
     sumeigval=cumsum(diag(eigval))/sum(diag(eigval));
     Lambda0=sqrt(N)*ev;
     Fhat0=X*Lambda0/N;
@@ -126,7 +126,6 @@ if jj==9
     end
 end
 
-Fhat = [];
 Fhat = Fhat0(:,1:kmax);
 Lambda = Lambda0(:,1:kmax);
 chat = Fhat*Lambda';

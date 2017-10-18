@@ -39,28 +39,42 @@ f=randn(T,r);
 lambda=randn(N,r);
 x=f*lambda'+e;
 
-rmax=10;
-DEMEAN=2;
-fprintf('Demean %d \n',DEMEAN);
+kmax=10;
+gnum = 2;
+demean=2;
+fprintf('Demean %d \n',demean);
 disp('Determining number of factors');
 fprintf('T= %d N= %d r = %d \n', size(x), r)
 
+
+[nfac1, Chat, Fhat1, ev1] = jln_nbplog(x,kmax,gnum,demean);
+[nfac, icval, Fhat, Lhat, eigval] = bninfocrit(x,kmax,gnum,demean);
+
+
 for i=1:8
-  disp(jln_nbplog(x,rmax,i,DEMEAN));
-end;  
+  disp([jln_nbplog(x, kmax, i, demean)]);
+end 
+
+for i=1:8
+  disp([bninfocrit(x, kmax, i, demean)]);
+end 
 
 
 [T, N] = size(x);
 
 
-x = randn(4,3)
+x = randn(4,3);
 xx = x'*x;
 
 
 [U, S, V] = svd(xx);
 [E, D] = eigsort(xx);
 
-disp([U, E])
-disp([S, D])
+%disp([U, E])
+%disp([S, D])
+
+
+mean(sum(x.*x /T))
+
 
 

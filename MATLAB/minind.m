@@ -2,6 +2,7 @@ function pos = minind(x, dim)
 % -------------------------------------------------------------------------
 % Indicates the position of the smallest value in columns or rows
 % of an arbitrary matrix x.
+%
 % If dim == 1, search in columns, return row index.
 % If dim == 2, search in rows, return column index.
 % If dim is not supplied, default to dim = 1.
