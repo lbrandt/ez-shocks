@@ -1,7 +1,7 @@
 function [ic1, chat,Fhat,eigval] = bninfocrit(x, kmax, gnum, demean)
 % -------------------------------------------------------------------------
 % Estimates number of factors according to some information criterion as in
-% Bai & Ng (2002) under asymptotic N,T.
+% Bai & Ng (2002) under asymptotic N: number of series, T: length of series.
 %
 % Information criteria
 %
@@ -33,27 +33,42 @@ function [ic1, chat,Fhat,eigval] = bninfocrit(x, kmax, gnum, demean)
 
 [T, N] = size(x);
 
+% Transform data according to demean
+if demean == 2
+    xtr = standardize(x);
+end
+
+if demean == 1
+    xtr = x-repmat(mean(x),T,1);
+end
+
+if demean == 0
+    xtr = x;
+end
+
+
+
+% Eigenvalue Decomposition
+if T < N
+    [ev,eigval,ev1] = svd(X*X');
+    sumeigval = cumsum(diag(eigval))/sum(diag(eigval));
+    Fhat0 = sqrt(T)*ev;
+    Lambda0 = X'*Fhat0/T;
+else
+    [ev,eigval,ev1] = svd(X'*X);
+    sumeigval=cumsum(diag(eigval))/sum(diag(eigval));
+    Lambda0=sqrt(N)*ev;
+    Fhat0=X*Lambda0/N;
+end
+
+
+
+
+
 NTprd = N*T;
 NTsum = N+T;
 
 CNT = min([sqrt(N), sqrt(T)]);
-
-
-
-% Transform data according to demean
-if demean == 2
-    xt = standardize(x);
-end
-
-if demean == 1
-    xt = x-repmat(mean(x),T,1);
-end
-
-if demean == 0
-    xt = x;
-end
-
-
 
 
 kgNT = zeros(1,kmax);
@@ -93,6 +108,11 @@ end
 
 
 
+
+
+
+IC1 = zeros(size(CT,1),kmax+1);
+Sigma = zeros(1,kmax+1);
 
 
    
