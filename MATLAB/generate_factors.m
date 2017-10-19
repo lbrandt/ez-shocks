@@ -39,16 +39,22 @@ kmax = 10; % Max number of factors to be extracted
 gnum = 2; % ICp2 chosen in JLN2015
 demean = 2; % Standardise data
 
-
 bnicv = zeros(kmax,1);
 for k = 1:kmax
     bnicv(k) = bnic(x, k, gnum, demean); % Compute BNIC for each k
 end
 
 bnicmin = min(bnicv);
-numfac = minind(bnicv); % Optimal number of factors according to lowest IC
+rhat = minind(bnicv); % Optimal number of factors according to lowest IC
+fprintf('\nFactors via IC: rhat = %d \n', rhat);
 
 % Extract factors via PCA
+[ehat1,Fhat1,lamhat1,ev1]  = jln_factors(x,kmax,gnum,demean);
+[Fhat, Lhat, ehat, ev] = factors(x, rhat, demean);
+
+sumeigval = cumsum(ev)/sum(ev);
+R2_static = sum(ev(1:rhat))/sum(ev);
 
 % Save factors for further analysis
+
 
