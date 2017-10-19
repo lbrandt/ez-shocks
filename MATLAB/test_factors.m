@@ -34,10 +34,10 @@ N=100;
 T=50;
 randn('state',999);
 
-e=randn(T,N);
-f=randn(T,r);
-lambda=randn(N,r);
-x=f*lambda'+e;
+e = randn(T,N);
+f = randn(T,r);
+lambda = randn(N,r);
+x = f*lambda'+e;
 
 kmax=10;
 gnum = 2;
@@ -50,14 +50,22 @@ fprintf('T= %d N= %d r = %d \n', size(x), r)
 [nfac1, Chat, Fhat1, ev1] = jln_nbplog(x,kmax,gnum,demean);
 [nfac, icval, Fhat, Lhat, eigval] = bninfocrit(x,kmax,gnum,demean);
 
-
 for i=1:8
   disp([jln_nbplog(x, kmax, i, demean)]);
 end 
 
 for i=1:8
   disp([bninfocrit(x, kmax, i, demean)]);
-end 
+end
+
+bnicv = zeros(kmax,1);
+for k = 1:kmax
+    bnicv(k) = bnic(x, k, gnum, demean);
+end
+
+bnicmin = min(bnicv);
+numfac = minind(bnicv);
+    
 
 
 [T, N] = size(x);
