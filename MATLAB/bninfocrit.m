@@ -31,6 +31,7 @@ function [numfac, IC, Fhat, Lhat, eigval] = bninfocrit(x, kmax, gnum, demean)
 %   Dependencies {source}
 %       svd {vanilla}
 %       minind {lb}
+%       standardise {lb}
 %
 % -------------------------------------------------------------------------
 
@@ -38,7 +39,7 @@ function [numfac, IC, Fhat, Lhat, eigval] = bninfocrit(x, kmax, gnum, demean)
 
 % Transform data according to demean
 if demean == 2
-    xtr = (x - repmat(mean(x),T,1))./repmat(std(x),T,1);
+    xtr = standardise(x);
     
 elseif demean == 1
     xtr = x - repmat(mean(x),T,1);

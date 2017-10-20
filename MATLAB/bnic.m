@@ -29,6 +29,7 @@ function [BNIC, Fhat, Lhat, eigval] = bnic(x, k, gnum, demean)
 %
 %   Dependencies {source}
 %       svd {vanilla}
+%       standardise {lb}
 %
 % -------------------------------------------------------------------------
 
@@ -36,7 +37,7 @@ function [BNIC, Fhat, Lhat, eigval] = bnic(x, k, gnum, demean)
 
 % Transform data according to demean
 if demean == 2
-    xtr = (x - repmat(mean(x),T,1))./repmat(std(x),T,1);
+    xtr = standardise(x);
     
 elseif demean == 1
     xtr = x - repmat(mean(x),T,1);
