@@ -62,32 +62,56 @@ R2_static = sum(evf(1:rhat))/sum(evf);
 % Forecast
 
 % Build predictor set
-zt     = [Fhat, Fhat(:,1).^2, Ghat(:,1)];
+zt     = [Fhat, Fhat(:, 1).^2, Ghat(:, 1)];
+[~, M] = size(zt);
 
 % Set dependent variables
-yt     = standardise(x(:,1:132)); % only macro data
+yt     = standardise(x(:, 1:132)); % only macro data
 [T, N] = size(yt);
 
 py     = 4; % number of depvar lags
 pz     = 2; % number of predictor lags
 maxlag = max(py,pz);
 
-q      = fix(4*(T/100)^(2/9)); % Newey-West lag length according to rule-of-thumb (N&W 1994)
+L      = fix(4*(T/100)^(2/9)); % Newey-West lag length rule-of-thumb (N&W 1994)
 
 
-ybetas = zeros(1+py+pz*size(zt,2),N);
+ybetas = zeros(1+py+pz*M, N);
 
 for i = 1:N
-    X    = [ones(T,1),mlags(yt(:,i),py),mlags(ft,pz)];
-    reg  = nwest(yt(p+1:end,i),X(p+1:end,:),q);
+    X    = [ones(T, 1),mlags(yt(:,i),py),mlags(zt,pz)];
+    reg  = nwest(yt(p+1:end,i),X(p+1:end,:),L);
     pass = abs(reg.tstat(py+2:end)) > 2.575; % hard threshold
     keep = [ones(1,py+1)==1,pass'];
     Xnew = X(:,keep);
-    reg  = nwest(yt(p+1:end,i),Xnew(p+1:end,:),q);
+    reg  = nwest(yt(p+1:end,i),Xnew(p+1:end,:),L);
     vyt(:,i)       = reg.resid; % forecast errors
     ybetas(keep,i) = reg.beta;   
     fmodels(:,i)   = pass; %chosen predictors
 end
 
+
+% Generate AR(4) errors for zt
+[T,R]  = size(zt);
+pf     = 4;
+L      = fix(4*(T/100)^(2/9));
+fbetas = zeros(R,pf+1);
+for i = 1:R
+   X   = [ones(T,1),mlags(zt(:,i),pf)];
+   reg = nwest(zt(pf+1:end,i),X(pf+1:end,:),L);
+   vzt(:,i)    = reg.resid;
+   fbetas(i,:) = reg.beta';
+end
+
+% Save data
+[T,N]  = size(vyt);
+ybetas = ybetas';
+dates  = 1900+(59:1/12:112-1/12)';
+dates  = dates(end-T+1:end);
+save ferrors dates vyt vzt names vartype ybetas fbetas py pz pf zt xt fmodels
+
+% Also write to .txt file for R code
+dlmwrite('vyt.txt',vyt,'delimiter','\t','precision',17);
+dlmwrite('vzt.txt',vzt,'delimiter','\t','precision',17);
 
 
