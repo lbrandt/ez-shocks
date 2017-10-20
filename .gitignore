@@ -4,6 +4,9 @@
 # Autosave
 *.asv
 
+# Output files
+*.out
+
 ################
 # R
 
