@@ -85,4 +85,19 @@ xx = x'*x;
 mean(sum(x.*x /T))
 
 
+test1 = jln_mlags(yt(:, i), py);
+test2 = mlag(yt(:,i), py);
+
+
+
+Year = 1959:1:2011;
+Month = 1:1:12;
+Day = 15;
+
+
+t = datetime(Year,Month,Day,'Format','eeee, MMMM d, y');
+
+
+
+
 

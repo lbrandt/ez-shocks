@@ -31,8 +31,8 @@ fprintf('Sample: T = %d, N = %d \n', size(x));
 
 %%%%
 % Find optimal number of factors according to Bai & Ng (2002)
-kmax = 20; % Max number of factors to be extracted
-gnum = 2; % ICp2 chosen in JLN2015
+kmax   = 20; % Max number of factors to be extracted
+gnum   = 2; % ICp2 chosen in JLN2015
 demean = 2; % Standardise data
 
 bnicv = zeros(kmax,1);
@@ -62,59 +62,67 @@ R2_static = sum(evf(1:rhat))/sum(evf);
 % Forecast
 
 % Build predictor set
-zt     = [Fhat, Fhat(:, 1).^2, Ghat(:, 1)];
-[~, M] = size(zt);
+zt       = [Fhat, Fhat(:, 1).^2, Ghat(:, 1)];
+[~, M]   = size(zt);
 
 % Set dependent variables
-yt     = standardise(x(:, 1:132)); % only macro data
-[T, N] = size(yt);
+yt       = standardise(x(:, 1:132)); % only macro data
+[T, N]   = size(yt);
 
-py     = 4; % number of depvar lags
-pz     = 2; % number of predictor lags
-maxlag = max(py,pz);
+py       = 4; % number of depvar lags
+pz       = 2; % number of predictor lags
+maxlag   = max(py, pz);
 
-L      = fix(4*(T/100)^(2/9)); % Newey-West lag length rule-of-thumb (N&W 1994)
+L        = fix(4*(T/100)^(2/9)); % Newey-West lag length rule-of-thumb (N&W 1994)
 
+ybetas   = zeros(1 + py + pz*M, N); % Parameter vectors of single equations in columns
+yfit     = zeros(T - maxlag, N); % Fitted values 
+vyt      = zeros(T - maxlag, N); % Forecast errors
 
-ybetas = zeros(1+py+pz*M, N); % Parameter matrix
+ymodels  = zeros(1 + py + pz*M, N); % Indicator matrix of included predictors
 
-for i = 1:N % Test predictors on their own
+for j = 1:N % Estimate system equation-by-equation
     
-    i = 1;
+    X    = [ones(T, 1), mlag(yt(:, j), py), mlag(zt, pz)]; % const + py lags of depvar + pz lags of predictors
+    reg  = nwest(yt(maxlag+1:end, j), X(maxlag+1:end, :), L);
+    pass = abs(reg.tstat(py+2:end)) > 2.575; % hard threshold 
+    keep = [ones(1, py+1) == 1, pass']; % always keep const, depvar lags, F1t
+    Xnew = X(:, keep);
+    reg  = nwest(yt(maxlag+1:end, j), Xnew(maxlag+1:end, :), L);
     
-    X    = [ones(T, 1), jln_mlags(yt(:, i), py), jln_mlags(zt, pz)];
-    reg  = nwest(yt(maxlag+1:end, i), X(maxlag+1:end, :), L);
-    pass = abs(reg.tstat(py+2:end)) > 2.575; % hard threshold
-    keep = [ones(1, py+1) == 1, pass'];
-    Xnew = X(:,keep);
-    reg  = nwest(yt(maxlag+1:end, i),Xnew(maxlag+1:end, :), L);
-    vyt(:,i)       = reg.resid; % forecast errors
-    ybetas(keep,i) = reg.beta;   
-    fmodels(:,i)   = pass; %chosen predictors
+    ybetas(keep, j) = reg.beta;
+    yfit(:, j)      = reg.yhat;
+    vyt(:, j)       = reg.resid;
+    
+    ymodels(:, j)   = keep;
 end
 
 
-% Generate AR(4) errors for zt
-[T,R]  = size(zt);
-pf     = 4;
-L      = fix(4*(T/100)^(2/9));
-fbetas = zeros(R,pf+1);
-for i = 1:R
-   X   = [ones(T,1),mlags(zt(:,i),pf)];
-   reg = nwest(zt(pf+1:end,i),X(pf+1:end,:),L);
-   vzt(:,i)    = reg.resid;
-   fbetas(i,:) = reg.beta';
+% Generate AR(4) errors for Predictor set zt
+[T, R]   = size(zt);
+pf       = 4;
+L        = fix(4*(T/100)^(2/9));
+
+fbetas   = zeros(1 + pf, R); % Parameter vectors of single equations in columns
+ffit     = zeros(T - pf, R); % Fitted values
+vft      = zeros(T - pf, R); % Prediction errors
+
+for j = 1:R % Equation-by-equation
+    X    = [ones(T, 1), mlag(zt(:, j), pf)];
+    reg  = nwest(zt(pf+1:end, j), X(pf+1:end, :), L);
+    
+    fbetas(:, j) = reg.beta;
+    ffit(:, j)   = reg.yhat;
+    vft(:, j)    = reg.resid;
 end
+
 
 % Save data
-[T,N]  = size(vyt);
-ybetas = ybetas';
-dates  = 1900+(59:1/12:112-1/12)';
-dates  = dates(end-T+1:end);
-save ferrors dates vyt vzt names vartype ybetas fbetas py pz pf zt xt fmodels
+maxlag = max([py, pz, pf]); % Maximum lag length out of all regressions run in file
+dates = dates(1+maxlag:end);
+
+save factors_forc dates yfit ffit ybetas fbetas vyt vft names vartype py pz pf zt x ymodels
 
 % Also write to .txt file for R code
-dlmwrite('vyt.txt',vyt,'delimiter','\t','precision',17);
-dlmwrite('vzt.txt',vzt,'delimiter','\t','precision',17);
-
-
+dlmwrite('factors_vyt.txt',vyt,'delimiter','\t','precision',17);
+dlmwrite('factors_vft.txt',vft,'delimiter','\t','precision',17);
