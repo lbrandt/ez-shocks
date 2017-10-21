@@ -126,3 +126,9 @@ save factors_forc dates yfit ffit ybetas fbetas vyt vft names vartype py pz pf z
 % Also write to .txt file for R code
 dlmwrite('factors_vyt.txt',vyt,'delimiter','\t','precision',17);
 dlmwrite('factors_vft.txt',vft,'delimiter','\t','precision',17);
+
+
+
+%writetable(vyt, 'factors_vyt.csv','delimiter',',','precision',17);
+
+
