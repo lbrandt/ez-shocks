@@ -14,4 +14,10 @@ data(:,ind) = [];
 names(ind)  = [];
 x           = data;
 
-fprintf('Sample: T = %d, N = %d \n', size(x));
+[T, N]   = size(x);
+
+ta = datetime(1960, 03, 15);
+te = datetime(2011, 12, 15);
+dates = (ta:calmonths(1):te)';
+
+fprintf('Sample: T = %d, N = %d \n', T, N);
