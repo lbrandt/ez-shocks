@@ -76,15 +76,18 @@ maxlag = max(py,pz);
 L      = fix(4*(T/100)^(2/9)); % Newey-West lag length rule-of-thumb (N&W 1994)
 
 
-ybetas = zeros(1+py+pz*M, N);
+ybetas = zeros(1+py+pz*M, N); % Parameter matrix
 
-for i = 1:N
-    X    = [ones(T, 1),mlags(yt(:,i),py),mlags(zt,pz)];
-    reg  = nwest(yt(p+1:end,i),X(p+1:end,:),L);
+for i = 1:N % Test predictors on their own
+    
+    i = 1;
+    
+    X    = [ones(T, 1), jln_mlags(yt(:, i), py), jln_mlags(zt, pz)];
+    reg  = nwest(yt(maxlag+1:end, i), X(maxlag+1:end, :), L);
     pass = abs(reg.tstat(py+2:end)) > 2.575; % hard threshold
-    keep = [ones(1,py+1)==1,pass'];
+    keep = [ones(1, py+1) == 1, pass'];
     Xnew = X(:,keep);
-    reg  = nwest(yt(p+1:end,i),Xnew(p+1:end,:),L);
+    reg  = nwest(yt(maxlag+1:end, i),Xnew(maxlag+1:end, :), L);
     vyt(:,i)       = reg.resid; % forecast errors
     ybetas(keep,i) = reg.beta;   
     fmodels(:,i)   = pass; %chosen predictors
