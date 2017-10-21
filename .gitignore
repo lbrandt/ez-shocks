@@ -4,6 +4,10 @@
 # Autosave
 *.asv
 
+# Data storage
+*.mat
+*.txt
+
 # Output files
 *.out
 
