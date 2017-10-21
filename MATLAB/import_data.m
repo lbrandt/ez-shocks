@@ -20,4 +20,5 @@ ta = datetime(1960, 03, 15);
 te = datetime(2011, 12, 15);
 dates = (ta:calmonths(1):te)';
 
+fprintf('Monthly series from %s to %s \n', datestr(ta), datestr(te));
 fprintf('Sample: T = %d, N = %d \n', T, N);
