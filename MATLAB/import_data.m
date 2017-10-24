@@ -38,6 +38,8 @@ varnames = strrep(varnames, ')', '');
 varnames = strrep(varnames, '’', '');
 
 
+
+
 fprintf('Monthly series from %s to %s \n', datestr(ta), datestr(te));
 fprintf('Sample: T = %d, N = %d \n', T, N);
 

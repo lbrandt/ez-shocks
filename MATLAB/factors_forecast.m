@@ -124,11 +124,28 @@ dates = dates(1+maxlag:end);
 save factors_forc dates yfit ffit ybetas fbetas vyt vft names vartype py pz pf zt x ymodels
 
 % Also write to .txt file for R code
-dlmwrite('factors_vyt.txt',vyt,'delimiter','\t','precision',17);
-dlmwrite('factors_vft.txt',vft,'delimiter','\t','precision',17);
+%dlmwrite('factors_vyt.txt',vyt,'delimiter','\t','precision',17);
+%dlmwrite('factors_vft.txt',vft,'delimiter','\t','precision',17);
+
+
+% Write to .csv for further use
+ynames = varnames(1:132);
+
+
+datetable = array2table(datenum(dates), 'VariableNames', {'Dates'});
 
 
 
-%writetable(vyt, 'factors_vyt.csv','delimiter',',','precision',17);
+table = array2table(vyt, 'VariableNames', ynames);
+table = [datestr(dates), table];
+
+writetable(table, 'factors_vyt.csv');
+
+
+
+num2str(['Factor' num2str(1:2)])
+
+fnums = 1:14;
+fnames = ['Factor' mat2str(fnums)];
 
 
