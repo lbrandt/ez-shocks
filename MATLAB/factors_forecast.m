@@ -117,6 +117,7 @@ for j = 1:R % Equation-by-equation
 end
 
 
+%%%%
 % Save data
 maxlag = max([py, pz, pf]); % Maximum lag length out of all regressions run in file
 dates = dates(1+maxlag:end);
@@ -129,23 +130,26 @@ save factors_forc dates yfit ffit ybetas fbetas vyt vft names vartype py pz pf z
 
 
 % Write to .csv for further use
-ynames = varnames(1:132);
+datetable = array2table(string(dates), 'VariableNames', {'Date'});
 
 
-datetable = array2table(datenum(dates), 'VariableNames', {'Dates'});
+% vyt factor model prediction errors
+ynames = varnames(1:132); % only macro variables
+
+vytable = array2table(vyt, 'VariableNames', ynames);
+vytable = [datetable, vytable];
+
+writetable(vytable, 'factors_vyt.csv');
 
 
+% vft factor AR(4) prediction errors
+fstring = string(repmat('Factor', R, 1));
+fnames = strcat(fstring, string((1:R)'));
+fnames = cellstr(fnames);
 
-table = array2table(vyt, 'VariableNames', ynames);
-table = [datestr(dates), table];
+vftable = array2table(vft, 'VariableNames', fnames);
+vftable = [datetable, vftable];
 
-writetable(table, 'factors_vyt.csv');
-
-
-
-num2str(['Factor' num2str(1:2)])
-
-fnums = 1:14;
-fnames = ['Factor' mat2str(fnums)];
+writetable(vftable, 'factors_vft.csv');
 
 

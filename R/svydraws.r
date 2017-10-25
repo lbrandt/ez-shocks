@@ -4,13 +4,18 @@
 # -------------------------------------------------------------------------
 
 # Initialization
-rm(list=ls())
 library(stochvol)
-set.seed(0) # for replication
+rm(list=ls())
 options(digits=17)
-vt   = read.table('vyt2014.txt',sep = '\t')
+set.seed(0) # for replication
+
+vt   = read.table('vyt2014.txt', sep = '\t')
+
+
 T    = dim(vt)[1]
 N    = dim(vt)[2]
+
+
 for (i in 1:N){
 	if(min(log(vt[,i]^2))== -Inf){
 		vt[,i] = vt[,i] + 0.00001 #offset to avoid taking log of zero
