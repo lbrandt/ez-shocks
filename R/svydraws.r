@@ -53,10 +53,17 @@ for (i in 1:obs.N){
 
 # Output results to .csv
 out = rbind(m,g) #include Geweke statistics
-save(out, file = "svymeans.RData")
 
 
-write.csv(t(out), file = 'svymeans.csv', row.names = FALSE)
 
+m = out[1:(obs.T + 3), ]
+g = out[622:624, ]
+
+
+
+save(m, file = "svymeans.RData")
+
+
+write.csv(t(m), file = 'svymeans.csv', row.names = FALSE)
 
 
