@@ -31,8 +31,8 @@ for (i in 1:obs.N){
 
 
 # Run MCMC algorithm and store draws
-S    = 1000 # JLN do 50000 + 50000 draws
-burn = 1000
+S    = 50000
+burn = 50000 # MCMC with [50000, 50000] takes roughly 50 seconds per iteration.
 m    = matrix(0, obs.T + 3, obs.N)
 g    = matrix(0, 3, obs.N)
 
@@ -46,24 +46,21 @@ for (i in 1:obs.N){
 	
 	#name    = sprintf('svydraws%d.txt', i)
 	#write(t(all),file=name,ncolumn=dim(all)[2])
-	print(i)
+	
+	# Show progress in console
+	cat('i =', i)
+	print(Sys.time())
 }
 
 
 
+
 # Output results to .csv
-out = rbind(m,g) #include Geweke statistics
 
-
-
-m = out[1:(obs.T + 3), ]
-g = out[622:624, ]
-
-
-
-save(m, file = "svymeans.RData")
-
+#save(m, file = "svymeans.RData")
+#save(g, file = "svygeweke.RData")
 
 write.csv(t(m), file = 'svymeans.csv', row.names = FALSE)
+write.csv(t(g), file = 'svygeweke.csv', row.names = FALSE)
 
 
