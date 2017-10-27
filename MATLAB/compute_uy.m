@@ -52,7 +52,7 @@ beta  = thy(2);
 tau2  = thy(3);
 x     = xy;
 for j = 1:h
-    evy{j} = expectedvar(alpha,beta,tau2,x,j); %Et[(v^y_t)^2]
+    evy{j} = expectedvar(alpha,beta,tau2,x,j); % Et[(v^y_t)^2]
 end;
 for t = 1:T
     for j = 1:h

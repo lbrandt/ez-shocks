@@ -5,10 +5,15 @@
 
 # Initialization
 rm(list=ls())
-library(stochvol)
+require(stochvol)
 set.seed(1000) # for replication
 options(digits=17)
-vt   = read.table('vft2014.txt',sep = '\t')
+
+vt = read.csv(header = TRUE, sep = ",", "C:/Dateien/My Dropbox/Lennart/Thesis/Code/ez-shocks/MATLAB/factors_vft.csv")
+
+# Remove dates vector
+vt = vt[, -1]
+
 T    = dim(vt)[1]
 N    = dim(vt)[2]
 
@@ -19,8 +24,8 @@ for (i in 1:N){
 }
 
 # Run MCMC algorithm and store draws
-S    = 50000
-burn = 50000
+S    = 500
+burn = 500
 m    = matrix(0,T+3,N)
 g    = matrix(0,3,N)
 for (i in 1:N){
@@ -30,6 +35,13 @@ for (i in 1:N){
 	g[,i]  = geweke.diag(draws$para)$z
 	name   = sprintf('svfdraws%d.txt',i)
 #	write(t(all),file=name,ncolumn=dim(all)[2])
+	
+	# Show progress in console
+	cat('i =', i)
+	print(Sys.time())	
 }
+
 out = rbind(m,g) #include Geweke statistics
-write(t(out),file='svfmeans2014.txt',ncolumn=dim(out)[2])
+#write(t(out),file='svfmeans2014.txt',ncolumn=dim(out)[2])
+
+write.csv(t(out), file = 'svfmeans2.csv', row.names = FALSE)
