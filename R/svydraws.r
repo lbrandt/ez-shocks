@@ -33,34 +33,26 @@ for (i in 1:obs.N){
 # Run MCMC algorithm and store draws
 S    = 50000
 burn = 50000 # MCMC with [50000, 50000] takes roughly 50 seconds per iteration.
-m    = matrix(0, obs.T + 3, obs.N)
-g    = matrix(0, 3, obs.N)
 
+h    = matrix(0, obs.T, obs.N) # Latent variable ht
+t    = matrix(0, 3, obs.N) # Parameter vector theta
+g    = matrix(0, 3, obs.N) # Geweke convergence statistic for each parameter
 
 for (i in 1:obs.N){
   
-	draws   = svsample(vt[, i], draws = S, burnin = burn, quiet = TRUE, thinpara = 10, thinlatent = 10)
-	all     = cbind(draws$para, draws$latent)
-	m[, i]  = colMeans(all)
-	g[, i]  = geweke.diag(draws$para)$z
-	
-	#name    = sprintf('svydraws%d.txt', i)
-	#write(t(all),file=name,ncolumn=dim(all)[2])
-	
-	# Show progress in console
-	cat('i =', i)
-	print(Sys.time())
+  draws   = svsample(vt[, i], draws = S, burnin = burn, quiet = TRUE, thinpara = 10, thinlatent = 10)
+  
+  h[, i]  = colMeans(draws$latent)
+  t[, i]  = colMeans(draws$para)
+  g[, i]  = geweke.diag(draws$para)$z
+  
+  # Show progress in console
+  cat('i =', i)
+  print(Sys.time())
 }
 
 
-
-
-# Output results to .csv
-
-#save(m, file = "svymeans.RData")
-#save(g, file = "svygeweke.RData")
-
-write.csv(t(m), file = 'svymeans.csv', row.names = FALSE)
-write.csv(t(g), file = 'svygeweke.csv', row.names = FALSE)
-
-
+# Save results to .csv in format [estimators, variables]
+write.csv(h, file = 'svylatent.csv', row.names = FALSE)
+write.csv(t, file = 'svyparams.csv', row.names = FALSE)
+write.csv(g, file = 'svygeweke.csv', row.names = FALSE)
