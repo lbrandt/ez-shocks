@@ -3,10 +3,9 @@ function [U] = compute_uy(xy,thy,yb,py,evf,phif)
 % Compute expected volatility of predictors up to horizon h
 %
 %
-%
 %   Input
-%       xy          ?
-%       thy         ?
+%       xy          Latent?
+%       thy         Parameter vector of logVar process [3 x 1]
 %       yb          ?
 %       py          ?
 %       evf         ?

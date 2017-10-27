@@ -9,6 +9,10 @@ load factors_forc;
 svy = csvread('svymeans.csv', 1);
 
 
+hy = svy(:, 4:621)'; % Estimates of latent process ht
+ty = [svy(:, 1), svy(:, 2), svy(:, 3)]; % Parameter estimators
+
+
 figure
 plot(dates, [vyt(:, 1), (svy(1, 1:618))'])
 legend('show')
