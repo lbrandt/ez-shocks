@@ -1,4 +1,4 @@
-function [U] = compute_uy(xy,thy,yb,py,evf,phif)
+function [U, evy] = compute_uy(xy,thy,yb,py,evf,phif)
 % -------------------------------------------------------------------------
 % Compute expected volatility of predictors up to horizon h
 %

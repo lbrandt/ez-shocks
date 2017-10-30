@@ -2,14 +2,24 @@
 % Compute matrix of uncertainty estimates for horizons 1 through 12
 % -------------------------------------------------------------------------
 
+%clear; clc;
+
 % Load data
-clear; clc;
 load factors_forc;
-%svf = load('svfmeans.txt');
+
+svf = csvread('svflatent.csv', 1);
+svf = csvread('svfparams.csv', 1);
+
+svy = csvread('svylatent.csv', 1);
+svy = csvread('svyparams.csv', 1);
+
+
+
+
 svy = csvread('svymeans.csv', 1);
 
 
-hy = svy(:, 4:621)'; % Estimates of latent process ht
+sy = svy(:, 4:621)'; % Estimates of latent process s(t)
 ty = [svy(:, 1), svy(:, 2), svy(:, 3)]; % Parameter estimators
 
 
