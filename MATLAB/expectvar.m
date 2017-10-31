@@ -1,4 +1,4 @@
-function [evar] = expectedvar(st, alpha, beta, tau, h)
+function [evar] = expectvar(st, alpha, beta, tau, h)
 % -------------------------------------------------------------------------
 % Computes the h-step-ahead expected variance E[exp{s(t+h)}] of the 
 % observed process with respect to information set I(t) using the

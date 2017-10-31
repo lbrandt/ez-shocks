@@ -1,5 +1,5 @@
 % -------------------------------------------------------------------------
-% Compute matrix of uncertainty estimates for horizons 1 through 12
+% Compute matrix of macro uncertainty estimates for horizons 1 through 12
 % -------------------------------------------------------------------------
 
 %clear; clc;
@@ -7,20 +7,48 @@
 % Load data
 load factors_forc;
 
-svf = csvread('svflatent.csv', 1);
-svf = csvread('svfparams.csv', 1);
+sf = csvread('svflatent.csv', 1); % Estimates of latent process s(t)
+tf = csvread('svfparams.csv', 1); % AR(1) parameter estimators
 
-svy = csvread('svylatent.csv', 1);
-svy = csvread('svyparams.csv', 1);
-
-
+sy = csvread('svylatent.csv', 1);
+ty = csvread('svyparams.csv', 1);
 
 
+% Compute uf
+h        = 12;
+bf       = sparse(fbetas);
+tf(1, :) = tf(1, :).* (1 - tf(2, :)); % Reparameterise mean
+
+
+
+%[evarf, phif] = compute_uf(sf, tf, fb, h);
+
+
+% Initialize parameters
+R   = size(bf, 2);
+
+% Create parameter matrix phif
+phif_top = [];
+for j = 2:pf+1
+    phif_top = [phif_top,sparse(1:R,1:R,fb(:,j))]; 
+end
+
+if pf > 1
+    phif_bot = [sparse(1:R*(pf-1),1:R*(pf-1),1),sparse(R*(pf-1),R,0)];
+    phif     = [phif_top;phif_bot];
+else
+    phif = phif_top;
+end
+
+
+
+
+%%%%
 svy = csvread('svymeans.csv', 1);
 
 
-sy = svy(:, 4:621)'; % Estimates of latent process s(t)
-ty = [svy(:, 1), svy(:, 2), svy(:, 3)]; % Parameter estimators
+xy = svy(:, 4:621)'; 
+thy = [svy(:, 1), svy(:, 2), svy(:, 3)]'; % Parameter estimators
 
 
 figure
@@ -31,11 +59,10 @@ legend('show')
 % Compute objects from predictors
 h      = 12;
 fb     = sparse(fbetas);
-thf    = [svf(1,:).*(1-svf(2,:));svf(2,:);svf(3,:).^2];
+thf    = [svf(1, :).*(1-svf(2,:));svf(2,:);svf(3,:).^2];
 xf     = svf(4:end-3,:);
 gf     = svf(end-3+1:end,:);
 [evf,phif] = compute_uf(xf,thf,fb,h);
-
 
 
 
