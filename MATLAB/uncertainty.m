@@ -20,25 +20,51 @@ bf       = sparse(fbetas);
 tf(1, :) = tf(1, :).* (1 - tf(2, :)); % Reparameterise mean
 
 
-
+%%%%
 %[evarf, phif] = compute_uf(sf, tf, fb, h);
 
 
-% Initialize parameters
+
+% Build VAR representation of the system of factors
 R   = size(bf, 2);
 
-% Create parameter matrix phif
-phif_top = [];
-for j = 2:pf+1
-    phif_top = [phif_top,sparse(1:R,1:R,fb(:,j))]; 
+
+fvar = bf(1, :)'; % Collect intercepts
+
+for i = 2:size(bf, 1) % Append VAR parameter matrices
+    
+    fvar = [fvar, diag(bf(i, :))]; % Diag because factors are not cross-correlated
 end
 
-if pf > 1
-    phif_bot = [sparse(1:R*(pf-1),1:R*(pf-1),1),sparse(R*(pf-1),R,0)];
-    phif     = [phif_top;phif_bot];
-else
-    phif = phif_top;
+% Build parameter matrix Phi of companion form
+phif = companion(R, pf, fvar);
+
+
+
+i=1;
+
+alpha       = tf(1,i);
+beta        = tf(2,i);
+tau        = tf(3,i);
+
+evarf = expectvar(sf(:, i), alpha, beta, tau, 1);
+
+
+% Compute evf
+evarf = cell(h,1);
+
+for j = 1:h
+    for i = 1:R
+        alpha       = tf(1,i);
+        beta        = tf(2,i);
+        tau         = tf(3,i);
+        x           = sf(:,i);
+        evarf{j}(:,i) = expectvar(x, alpha, beta, tau, j); %Et[(v^f_t)^2]
+    end
 end
+
+
+%%%%%%
 
 
 

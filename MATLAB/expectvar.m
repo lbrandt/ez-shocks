@@ -16,11 +16,11 @@ function [evar] = expectvar(st, alpha, beta, tau, h)
 %       h           Forecast horizon
 %
 %   Output
-%       U        	?
+%       evar        Expected h-step-ahead forecast variance [T x 1]
 % 
 %   Dependencies {source}
 % -------------------------------------------------------------------------
 
-evar = exp( alpha* (1-beta^h)/(1-beta) + beta^h * st + tau/2* (1-b^(2*h))/(1-b^2) );
+evar = exp( alpha* (1-beta^h)/(1-beta) + beta^h * st + 0.5*tau^2 * (1-beta^(2*h))/(1-beta^2) );
 
 end

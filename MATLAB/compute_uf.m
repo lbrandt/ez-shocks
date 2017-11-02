@@ -42,7 +42,7 @@ for j = 1:h
         beta        = tf(2,i);
         tau2        = tf(3,i);
         x           = xf(:,i);
-        evarf{j}(:,i) = expectvar(alpha,beta,tau2,x,j); %Et[(v^f_t)^2]
+        evf{j}(:,i) = expectvar(alpha,beta,tau2,x,j); %Et[(v^f_t)^2]
     end
 end
 
