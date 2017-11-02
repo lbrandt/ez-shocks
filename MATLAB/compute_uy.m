@@ -6,13 +6,14 @@ function [U, evy] = compute_uy(xy,thy,yb,py,evf,phif)
 %   Input
 %       xy          Latent?
 %       thy         Parameter vector of logVar process [3 x 1]
-%       yb          ?
-%       py          ?
-%       evf         ?
-%       phif        ?
+%       yb          ybetas
+%       py          ylags
+%       evf         expected variance in factors
+%       phif        factors companion matrix
 %
 %   Output
-%       U        	?
+%       U        	uncertainty
+%       evy         expected variance in y
 % 
 %   Dependencies {source}
 %
