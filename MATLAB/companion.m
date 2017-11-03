@@ -9,7 +9,7 @@ function [cmatphi] = companion(numvars, numlags, params)
 %   Input
 %       numvars     Number of variables in the system N
 %       numlags     Number of lags P
-%       params      Parameter vector [3 x 1]
+%       params      Parameter vector [N x NP]
 %
 %   Output
 %       cmatphi  	Parameter matrix of VAR companion form [NP x NP]
@@ -19,10 +19,11 @@ function [cmatphi] = companion(numvars, numlags, params)
 % -------------------------------------------------------------------------
 
 % Read dimensions
+plength = size(params, 2);
 cmatdim = numvars*numlags;
 
 % Arrange VAR parameters
-cmattop = params(:, end-cmatdim+1:end);
+cmattop = params(:, plength-cmatdim+1:plength);
 
 % Build lower section
 cmatbot = [eye(cmatdim-numvars), zeros(cmatdim-numvars, numvars)];
