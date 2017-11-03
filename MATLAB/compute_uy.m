@@ -41,7 +41,7 @@ if py==1;  lambda_bottom   = []; end;
 lambda   = [yb(py+2:end),lambda_topright;lambda_bottom];
 
 phiy_top = yb(2:py+1);
-if py >1; phiy_bottom = [sparse(1:py-1,1:py-1,1),sparse(py-1,1,0)]; end;
+if py >1; phiy_bottom = [sparse(1:py-1,1:py-1,1),sparse(py-1,1,0)]; end; % Why not use speye?
 if py==1; phiy_bottom = []; end;
 phiy         = [phiy_top;phiy_bottom];
 phi_topright = sparse(r*pf,py,0);

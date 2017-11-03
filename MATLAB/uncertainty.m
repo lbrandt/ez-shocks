@@ -19,10 +19,28 @@ ty = csvread('svyparams.csv', 1);
 %%%%
 %[evarf, phif] = compute_uf(sf, tf, fb, h);
 
+
+
+% Initialisation
+h  = 12;
+
+T  = size(sy, 1);
+
+bf = sparse(fbetas);
+by = sparse(ybetas);
+
+[numparf, R] = size(bf);
+[numpary, N] = size(by);
+
+
+
 % Compute uf
-h        = 12;
-bf       = sparse(fbetas);
+
+
+
 tf(1, :) = tf(1, :).* (1 - tf(2, :)); % Reparameterise mean
+
+
 
 % Compute expected h-step-ahead variance in factors
 i=1;
@@ -34,7 +52,12 @@ tau        = tf(3,i);
 evarf = expectvar(sf(:, i), alpha, beta, tau, 1);
 
 
-% Compute evf
+
+
+
+
+
+% Compute expected variance E[sigma2_F(t+h)]
 evarf = cell(h,1);
 
 for j = 1:h
@@ -43,17 +66,16 @@ for j = 1:h
         beta        = tf(2,i);
         tau         = tf(3,i);
         x           = sf(:,i);
-        evarf{j}(:,i) = expectvar(x, alpha, beta, tau, j); %Et[(v^f_t)^2]
+        evarf{j}(:,i) = expectvar(x, alpha, beta, tau, j);
     end
 end
 
 
 
 % Build VAR representation of the system of factors
-R   = size(bf, 2);
 
 fvar = bf(1, :)'; % Collect intercepts
-for i = 2:size(bf, 1) % Append VAR parameter matrices
+for i = 2:numparf % Append VAR parameter matrices
     
     fvar = [fvar, diag(bf(i, :))]; % Diag because factors are not cross-correlated
 end
@@ -62,47 +84,102 @@ end
 phif = companion(R, pf, fvar);
 
 
+
 %%%%
 % Compute uncertainty in macro variables
-[T, N] = size(vyt);
 ut     = zeros(T, N, h);
 
-yb    = sparse(ybetas);
+
+
+phiy1 = companion(1, py, by(1:py+1, 1)');
+lambda1 = [[by(py+2:end, 1); zeros(R*(pf-pz),1)], zeros(R*py, py-1)]';
+lambda2(1, 1:numpary-(py+1)) = by(py+2:end, 1);
+
+
+lambda2 = sparse(1, 1:numpary-(py+1), by(py+2:end, 1), py, R*pf);
+
+
+ymodel1 = ymodels(6:end, 1);
+ybtest1 = ybetas(6:end, 1);
+lambdatest = full(lambda);
+
+
+
+
+% Initialisation
+%lambda = sparse(py, R*pf, 0);
+phiy   = sparse(py, py, 0);
+phi    = sparse(R*pf + py, R*pf + py, 0);
+
+for i = 1:N
+    
+    % Build parameter matrix for variable's FAVAR representation
+    lambda = sparse(1, 1:numpary-(py+1), by(py+2:end, i), py, R*pf); % Lambda contains parameters from reg(y ~ z)  on first row, then filled up with zeros to match dims
+    phiy   = companion(1, py, by(1:py+1, i)');
+    
+    phi    = [phif, zeros(R*py, py); lambda, phiy];
+    
+    
+    % Compute uncertainty using the recursion
+    alpha       = ty(1, i);
+    beta        = ty(2, i);
+    tau         = ty(3, i);
+    x           = sy(:, i);
+    
+    % Compute h-step-ahead expected variance
+    for j = 1:h
+        evary{i}(:, j) = expectvar(x, alpha, beta, tau, j); 
+    end
+    
+    % Compute uncertainty
+    for t = 1:T
+        for j = 1:h
+            
+            ev = sparse(1:r*pf+py,1:r*pf+py,[evf{j}(t,:),evf0,evy{j}(t),evy0]);
+            
+            if j == 1
+                u = ev;
+            end
+            
+            if j  > 1
+                u = phi*u*phi' + ev;
+            end
+            
+            U(t,j) = u(r*pf+1,r*pf+1); % select relevant entry
+        end
+    end
+    
+    
+    
+    
+    
+end
+
+
+fullphi = full(phi);
+
 
 %%%%
 % Compute uy
 
-% Initialize parameters
-
-h  = length(evarf);
-r  = size(evarf{1},2);
-pf = size(phif,1)/r;
-pz = (length(yb)-1-py)/r;
-T  = length(xy);
-
-% Preallocate variables
-U = zeros(T,h);
-if pf >1; evf0 = sparse(1,r*(pf-1),0); end;
-if pf==1; evf0 = []; end;
-if py >1; evy0 = sparse(1,py-1,0); end;
-if py==1; evy0 = []; end;
-
-% Construct the main phi matrix
-if pf >pz; lambda_topright = sparse(1,(pf-pz)*r,0); end;
-if pf==pz; lambda_topright = []; end;
-if py >1;  lambda_bottom   = sparse(py-1,r*pf,0); end;
-if py==1;  lambda_bottom   = []; end;
-lambda   = [yb(py+2:end),lambda_topright;lambda_bottom];
-
-phiy_top = yb(2:py+1);
-if py >1; phiy_bottom = [sparse(1:py-1,1:py-1,1),sparse(py-1,1,0)]; end;
-if py==1; phiy_bottom = []; end;
-phiy         = [phiy_top;phiy_bottom];
-phi_topright = sparse(r*pf,py,0);
-phi          = [phif,phi_topright;lambda,phiy];
 
 
-
+% Compute uncertainty using the recursion
+alpha = thy(1);
+beta  = thy(2);
+tau2  = thy(3);
+x     = xy;
+for j = 1:h
+    evy{j} = expectedvar(alpha,beta,tau2,x,j); % Et[(v^y_t)^2]
+end;
+for t = 1:T
+    for j = 1:h
+        ev = sparse(1:r*pf+py,1:r*pf+py,[evf{j}(t,:),evf0,evy{j}(t),evy0]);
+        if j == 1; u = ev; end;
+        if j  > 1; u = phi*u*phi' + ev; end; 
+        U(t,j) = u(r*pf+1,r*pf+1); % select relevant entry    
+    end 
+end
 
 
 
@@ -114,9 +191,9 @@ phi          = [phif,phi_topright;lambda,phiy];
 for i = 1:N
     tic;
     yb    = sparse(ybetas(i,:));
-    thy   = [svy(1, i).*(1 - svy(2, i)); svy(2, i); svy(3, i).^2];
-    xy    = svy(4:end - 3, i);
-    ut(:, i, :) = compute_uy(xy, thy, yb, py, evf, phif);
+    thy   = [ty(1, i); ty(2, i); ty(3, i).^2];
+    xy    = sy;
+    ut(:, i, :) = compute_uy(xy, thy, yb, py, evarf, phif);
     fprintf('Series %d, Elapsed Time = %0.4f \n', i, toc);
 end
 
