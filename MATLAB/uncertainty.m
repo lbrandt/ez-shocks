@@ -71,6 +71,22 @@ for j = 1:h
 end
 
 
+% evarf2
+evarf2 = zeros(T, R, h);
+
+for j = 1:h
+    for i = 1:R
+        alpha       = tf(1,i);
+        beta        = tf(2,i);
+        tau         = tf(3,i);
+        x           = sf(:,i);
+        
+        evarf2(:, i, j) = expectvar(x, alpha, beta, tau, j);
+    end
+end
+
+isequal(evarf2(:, 1, 4), evarf{4}(:, 1))
+
 
 % Build VAR representation of the system of factors
 
@@ -107,14 +123,18 @@ lambdatest = full(lambda);
 
 
 % Initialisation
-%lambda = sparse(py, R*pf, 0);
+evary  = zeros(T, N, h);
 phiy   = sparse(py, py, 0);
 phi    = sparse(R*pf + py, R*pf + py, 0);
 
 for i = 1:N
     
+    
+    i = 1
+    
+    
     % Build parameter matrix for variable's FAVAR representation
-    lambda = sparse(1, 1:numpary-(py+1), by(py+2:end, i), py, R*pf); % Lambda contains parameters from reg(y ~ z)  on first row, then filled up with zeros to match dims
+    lambda = sparse(1, 1:numpary-(py+1), by(py+2:end, i), py, R*pf); % Lambda contains parameters from reg(y ~ z) on first row, then filled up with zeros to match dims
     phiy   = companion(1, py, by(1:py+1, i)');
     
     phi    = [phif, zeros(R*py, py); lambda, phiy];
@@ -128,8 +148,20 @@ for i = 1:N
     
     % Compute h-step-ahead expected variance
     for j = 1:h
-        evary{i}(:, j) = expectvar(x, alpha, beta, tau, j); 
+        evary(:, i, j) = expectvar(x, alpha, beta, tau, j); 
     end
+    
+    
+    for t = 1:T
+       for j = 1:h
+           
+           ev = evary(t, i, j)
+        
+       end
+    end
+    
+    
+    
     
     % Compute uncertainty
     for t = 1:T
