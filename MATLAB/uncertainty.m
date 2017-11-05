@@ -189,19 +189,32 @@ legend(names(vselect))
 load jlnresults
 load ut
 
+lbsum = summarize(Uavg);
+jlnsum = summarize(utcsa);
+
+
 figure
+subplot(1,2,1);
+for i = [1, 3, 12]
+    plot(dates, Uavg(:, i))
+    hold on
+end
+legend('show')
+
+subplot(1,2,2);
 for i = [1, 3, 12]
     plot(dates, utcsa(:, i))
     hold on
 end
 legend('show')
 
-figure
-plot(dates, ut(:, 1, 1))
-hold on
-plot(dates, jlnut(:, 1, 1))
-legend('show')
 
+
+figure
+plot(dates, ut(:, 1, 3))
+hold on
+plot(dates, jlnut(:, 1, 3))
+legend('show')
 
 
 
