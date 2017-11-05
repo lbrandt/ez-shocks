@@ -43,22 +43,10 @@ tf(1, :) = tf(1, :).* (1 - tf(2, :)); % Reparameterise mean
 
 
 % Compute expected h-step-ahead variance in factors
-i=1;
-
-alpha       = tf(1,i);
-beta        = tf(2,i);
-tau        = tf(3,i);
-
-evarf = expectvar(sf(:, i), alpha, beta, tau, 1);
-
-
-
-
-
 
 
 % Compute expected variance E[sigma2_F(t+h)]
-evarf = cell(h,1);
+evarf1 = cell(h,1);
 
 for j = 1:h
     for i = 1:R
@@ -66,13 +54,13 @@ for j = 1:h
         beta        = tf(2,i);
         tau         = tf(3,i);
         x           = sf(:,i);
-        evarf{j}(:,i) = expectvar(x, alpha, beta, tau, j);
+        evarf1{j}(:,i) = expectvar(x, alpha, beta, tau, j);
     end
 end
 
 
 % evarf2
-evarf2 = zeros(T, R, h);
+evarf = zeros(T, R, h);
 
 for j = 1:h
     for i = 1:R
@@ -81,11 +69,11 @@ for j = 1:h
         tau         = tf(3,i);
         x           = sf(:,i);
         
-        evarf2(:, i, j) = expectvar(x, alpha, beta, tau, j);
+        evarf(:, i, j) = expectvar(x, alpha, beta, tau, j);
     end
 end
 
-isequal(evarf2(:, 1, 4), evarf{4}(:, 1))
+isequal(evarf(:, 1, 4), evarf1{4}(:, 1))
 
 
 % Build VAR representation of the system of factors
@@ -103,7 +91,7 @@ phif = companion(R, pf, fvar);
 
 %%%%
 % Compute uncertainty in macro variables
-ut     = zeros(T, N, h);
+
 
 
 
@@ -124,6 +112,8 @@ lambdatest = full(lambda);
 
 % Initialisation
 evary  = zeros(T, N, h);
+ut     = zeros(T, N, h);
+
 phiy   = sparse(py, py, 0);
 phi    = sparse(R*pf + py, R*pf + py, 0);
 
@@ -155,19 +145,39 @@ for i = 1:N
     for t = 1:T
        for j = 1:h
            
-           ev = evary(t, i, j)
+           t = 600
+           j = 3
+           
+           % Diagonal matrix of h-step-ahead variance forecasts for each variable/factor separately
+           % Zeros on diag where depvar vector [Zt, Yjt]' contains lagged terms
+           evh = diag([evarf(t, :, j)'; zeros(R*pf - R, 1); evary(t, i, j)'; zeros(py - 1, 1)]);
+           
+           evh = sparse(1:R*pf + py, 1:R*pf + py, [evarf(t, :, j)'; zeros(R*pf - R, 1); evary(t, i, j)'; zeros(py - 1, 1)]);
+           
+           if j == 1
+               ui = evh;
+           else
+               ui = phi* ui* phi' + evh;
+           end
+           
+           ut(t, i, j) = ui(R*pf + 1, R*pf + 1); % Select element corresponding to yt
         
        end
     end
     
     
     
+    if pf >1; evf0 = sparse(1,R*(pf-1),0); end;
+    if pf==1; evf0 = []; end;
+    if py >1; evy0 = sparse(1,py-1,0); end;
+    if py==1; evy0 = []; end;
     
-    % Compute uncertainty
+    
+    % Compute uncertainty in series i
     for t = 1:T
         for j = 1:h
             
-            ev = sparse(1:r*pf+py,1:r*pf+py,[evf{j}(t,:),evf0,evy{j}(t),evy0]);
+            ev1 = sparse(1:R*pf+py,1:R*pf+py,[evarf1{j}(t,:),evf0,evary(t, i, h),evy0]);
             
             if j == 1
                 u = ev;
@@ -236,8 +246,12 @@ end
 
 %%%%%%
 figure
-plot(dates, [vyt(:, 1), (svy(1, 1:618))'])
+for i = [1, 3, 12]
+    plot(dates, ut(:, 1, i))
+    hold on
+end
 legend('show')
+
 
 
 %%%%
