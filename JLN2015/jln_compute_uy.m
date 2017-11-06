@@ -1,4 +1,4 @@
-function [U] = jln_compute_uy(xy,thy,yb,py,evf,phif)
+function [U, evy, phi, lambda, phiy] = jln_compute_uy(xy,thy,yb,py,evf,phif)
 % -------------------------------------------------------------------------
 % Compute expected volatility of predictors up to horizon h
 % -------------------------------------------------------------------------
@@ -42,6 +42,7 @@ end;
 for t = 1:T
     for j = 1:h
         ev = sparse(1:r*pf+py,1:r*pf+py,[evf{j}(t,:),evf0,evy{j}(t),evy0]);
+        
         if j == 1; u = ev; end;
         if j  > 1; u = phi*u*phi' + ev; end; 
         U(t,j) = u(r*pf+1,r*pf+1); % select relevant entry    

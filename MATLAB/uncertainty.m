@@ -81,6 +81,7 @@ ut     = zeros(T, N, h);
 phiy   = sparse(py, py, 0);
 phi    = sparse(R*pf + py, R*pf + py, 0);
 
+phimat = cell(N,1);
 
 for i = 1:N
     
@@ -119,6 +120,8 @@ for i = 1:N
                ui = phi* ui* phi' + evh; % for h>1, Omega = phi* Et[sigma2_Y(t+h-1)]* phi + Et[sigma2_Y(t+h)]
            end
            
+           phimat{i} = phi;
+           
            ut(t, i, j) = ui(R*pf + 1, R*pf + 1); % Select element corresponding to yt, this is the squared uncertainty in this variable at time t looking h-steps ahead (?)
        end
     end
@@ -132,89 +135,6 @@ Uavg = squeeze(mean(Uind,2));
 
 
 
-
-
-%%%%%%%%
-% Results
-
-test1 = sqrt(ut(:, 1, 3));
-test2 = test1.^2;
-
-isequal(test1, Uind(:, 1, 3))
-isequal(test2, ut(:, 1, 3))
-
-
-
-
-% Single series uncertainty
-hselect = 12;
-
-figure
-for i = 1:10
-    plot(dates, Uind(:, i, hselect))
-    hold on
-end
-
-
-
-% Aggregate uncertainty, simple average
-figure
-for i = [1, 3, 12]
-    plot(dates, Uavg(:, i))
-    hold on
-end
-legend('show')
-
-
-
-
-% Does it hold that U is larger for larger h?
-tselect = 600;
-vselect = 1:9;
-
-figure
-for i = vselect
-    plot(1:h, squeeze(Uind(tselect, i, :)), 'DisplayName', strcat('Var', num2str(i)))
-    hold on
-end
-legend('show')
-
-legend(names(vselect))
-
-
-
-% Compare to JLN aggu results
-
-%save jlnresults jlnut utcsa utpca
-load jlnresults
-load ut
-
-lbsum = summarize(Uavg);
-jlnsum = summarize(utcsa);
-
-
-figure
-subplot(1,2,1);
-for i = [1, 3, 12]
-    plot(dates, Uavg(:, i))
-    hold on
-end
-legend('show')
-
-subplot(1,2,2);
-for i = [1, 3, 12]
-    plot(dates, utcsa(:, i))
-    hold on
-end
-legend('show')
-
-
-
-figure
-plot(dates, ut(:, 1, 3))
-hold on
-plot(dates, jlnut(:, 1, 3))
-legend('show')
 
 
 

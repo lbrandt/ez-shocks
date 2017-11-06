@@ -11,12 +11,12 @@ names(ind)  = [];
 xt          = data;
 
 % Estimate factors
-[e,fhat,lf,vf] = factors(xt,20,2,2);
-[e,ghat,lg,vg] = factors(xt.^2,20,2,2);
+[e,fhat,lf,vf] = jln_factors(xt,20,2,2);
+[e,ghat,lg,vg] = jln_factors(xt.^2,20,2,2);
 outf     = 'mR2_fhat.out';
 outg     = 'mR2_ghat.out';
-[R2,mR2] = mrsq(fhat,lf,vf,names,vartype,outf);
-[R2,mR2] = mrsq(ghat,lg,vg,names,vartype,outg);
+[R2,mR2] = jln_mrsq(fhat,lf,vf,names,vartype,outf);
+[R2,mR2] = jln_mrsq(ghat,lg,vg,names,vartype,outg);
 ft       = [fhat,fhat(:,1).^2,ghat(:,1)]; %predictor set
 
 % Generate forecast errors for yt
@@ -28,7 +28,7 @@ p      = max(py,pz);
 q      = fix(4*(T/100)^(2/9));
 ybetas = zeros(1+py+pz*size(ft,2),N);
 for i = 1:N
-    X    = [ones(T,1),mlags(yt(:,i),py),mlags(ft,pz)];
+    X    = [ones(T,1),mlag(yt(:,i),py),mlag(ft,pz)];
     reg  = nwest(yt(p+1:end,i),X(p+1:end,:),q);
     pass = abs(reg.tstat(py+2:end)) > 2.575; % hard threshold
     keep = [ones(1,py+1)==1,pass'];
@@ -45,7 +45,7 @@ pf     = 4;
 q      = fix(4*(T/100)^(2/9));
 fbetas = zeros(R,pf+1);
 for i = 1:R
-   X   = [ones(T,1),mlags(ft(:,i),pf)];
+   X   = [ones(T,1),mlag(ft(:,i),pf)];
    reg = nwest(ft(pf+1:end,i),X(pf+1:end,:),q);
    vft(:,i)    = reg.resid;
    fbetas(i,:) = reg.beta';
@@ -56,7 +56,7 @@ end
 ybetas = ybetas';
 dates  = 1900+(59:1/12:112-1/12)';
 dates  = dates(end-T+1:end);
-save ferrors dates vyt vft names vartype ybetas fbetas py pz pf ft xt fmodels
+save jln_ferrors dates vyt vft names vartype ybetas fbetas py pz pf ft xt fmodels
 
 % Also write to .txt file for R code
 dlmwrite('vyt.txt',vyt,'delimiter','\t','precision',17);
