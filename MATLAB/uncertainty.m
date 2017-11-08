@@ -130,29 +130,77 @@ for i = 1:N
     
 end
 
+
 Uind = sqrt(ut);
+
+
+% Simple average
 Uavg = squeeze(mean(Uind,2));
 
 
+% Principal component analysis
+Upca = zeros(T,h);
+for j = 1:h
+   logu    = log(sqrt(ut(:,:,j)));
+   dlogu(:,:,j)  = logu(2:end,:) - logu(1:end-1,:);
+   [de,du,dl,dv] = factors(dlogu(:,:,j),5,2,1);
+   % Rotate estimate
+   rho     = corr(cumsum([0;du(:,1)]),utcsa(:,j));
+   if rho < 0; 
+       du  = -du; 
+       dl  = -dl; 
+   end;
+   ufac    = cumsum([zeros(1,size(du,2));du]);
+   dufac(:,:,j) = du;
+   dlam(:,:,j)  = dl;
+   deig(:,j)  = dv;
+   % Calibrate to cross-section mean
+   sd      = std(utcsa(:,j));
+   mn      = mean(utcsa(:,j));
+   p0      = [1,0.5];
+   opt     = optimset('tolfun',1e-50,'display','off');
+   [p,obj] = fminsearch(@(p)calibratef(p,ufac(:,1),sd,mn),p0,opt);
+   Upca(:,j) = exp((p(1)*ufac(:,1)+p(2))./2); 
+end
+
+
+
+
+
+
+
+
+
 
 
 
 
 
 %%%%
-svy = csvread('svymeans.csv', 1);
+% Plot
+
+% Aggregate uncertainty, simple average
+figure
+for i = [1, 3, 12]
+    plot(dates, Uavg(:, i))
+    hold on
+end
+legend('show')
 
 
-xy = svy(:, 4:621)'; 
-thy = [svy(:, 1), svy(:, 2), svy(:, 3)]'; % Parameter estimators
+% Single series uncertainty
+hselect = 12;
 
-
-
+figure
+for i = 1:10
+    plot(dates, Uind(:, i, hselect))
+    hold on
+end
 
 
 
 %%%%
-
+% Save results
 
 
 
