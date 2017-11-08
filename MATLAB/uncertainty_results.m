@@ -88,6 +88,34 @@ legend('show')
 
 
 
+%%%%
+% Compare alternative aggregate uncertainties
+h = 12;
+
+figure
+for i = 1:h
+    
+    subplot(4, 3, i)
+    plot(dates, Upca(:, i))
+    hold on
+    plot(dates, Upcalog(:, i))
+    hold on
+    plot(dates(2:end), Upcadlog(:, i))
+    title(['h = ',num2str(i)])
+end
+
+% Plot diffed measures
+figure
+for i = 1:h
+    
+    subplot(4, 3, i)
+    plot(dates(2:end), standardise(dUpcalog(:, i)))
+    hold on
+    plot(dates(2:end), standardise(Upcadlog(:, i)))
+    title(['h = ',num2str(i)])
+end
+
+
 % Does it hold that U is larger for larger h?
 tselect = 600;
 vselect = 1:9;
@@ -100,6 +128,12 @@ end
 legend('show')
 
 legend(names(vselect))
+
+
+
+
+
+
 
 
 

@@ -130,37 +130,64 @@ for i = 1:N
     
 end
 
-
 Uind = sqrt(ut);
 
 
+
+%%%%
+% Aggregate individual uncertainty
 % Simple average
 Uavg = squeeze(mean(Uind,2));
 
 
 % Principal component analysis
-Upca = zeros(T,h);
+% Transform individual uncertainties to logdiffs
+logu  = log(Uind(:, :, :));
+dlogu = logu(2:end, :, :) - logu(1:end-1, :, :);
+
+dufac = zeros(T-1, N, h);
+
+Upca    = zeros(T, h);
+Upcalog = zeros(T, h);
+Upcadlog = zeros(T-1, h);
+
+for i = 1:h
+    
+    Upca(:, i)    = factors(Uind(:, :, i), 1, 2);
+    Upcalog(:, i) = factors(logu(:, :, i), 1, 2);
+    Upcadlog(:, i) = factors(dlogu(:, :, i), 1, 2);
+end
+
+dUpcalog = Upcalog(2:end, :) - Upcalog(1:end-1, :);
+
+
 for j = 1:h
-   logu    = log(sqrt(ut(:,:,j)));
-   dlogu(:,:,j)  = logu(2:end,:) - logu(1:end-1,:);
-   [de,du,dl,dv] = factors(dlogu(:,:,j),5,2,1);
+   logu = log(Uind(:, :, j));
+   dlogu(:, :, j)  = logu(2:end, :) - logu(1:end-1, :);
+   
+   
+   [de, du, dl, dv] = jln_factors(dlogu(:, :, j), 5, 2, 1);
+   
    % Rotate estimate
-   rho     = corr(cumsum([0;du(:,1)]),utcsa(:,j));
-   if rho < 0; 
-       du  = -du; 
-       dl  = -dl; 
-   end;
-   ufac    = cumsum([zeros(1,size(du,2));du]);
-   dufac(:,:,j) = du;
-   dlam(:,:,j)  = dl;
-   deig(:,j)  = dv;
+   rho     = corr(cumsum([0; du(:, 1)]), Uavg(:, j));
+   
+   if rho < 0
+       du = -du; 
+       dl = -dl; 
+   end
+   
+   ufac    = cumsum([zeros(1, size(du, 2)); du]);
+   dufac(:, :, j) = du;
+   dlam(:, :, j)  = dl;
+   deig(:, j)  = dv;
+   
    % Calibrate to cross-section mean
-   sd      = std(utcsa(:,j));
-   mn      = mean(utcsa(:,j));
-   p0      = [1,0.5];
-   opt     = optimset('tolfun',1e-50,'display','off');
-   [p,obj] = fminsearch(@(p)calibratef(p,ufac(:,1),sd,mn),p0,opt);
-   Upca(:,j) = exp((p(1)*ufac(:,1)+p(2))./2); 
+   sd      = std(Uavg(:, j));
+   mn      = mean(Uavg(:, j));
+   p0      = [1, 0.5];
+   opt     = optimset('tolfun', 1e-50, 'display','off');
+   [p, obj] = fminsearch(@(p)calibratef(p, ufac(:, 1), sd, mn), p0, opt);
+   Upca1(:, j) = exp((p(1)* ufac(:, 1) + p(2))./ 2); 
 end
 
 
