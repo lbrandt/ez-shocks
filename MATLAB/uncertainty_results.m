@@ -92,15 +92,24 @@ legend('show')
 % Compare alternative aggregate uncertainties
 h = 12;
 
+
+Upcadlogsum = zeros(T, h);
+
+for i = 2:T
+    
+    Upcadlogsum(i, :) = Upcadlogsum(i-1, :) + Upcadlog(i-1, :);
+end
+
+
 figure
 for i = 1:h
     
     subplot(4, 3, i)
-    plot(dates, Upca(:, i))
+    plot(dates, Upcascaled(:, i))
     hold on
-    plot(dates, Upcalog(:, i))
-    hold on
-    plot(dates(2:end), Upcadlog(:, i))
+    plot(dates, Uavg(:, i))
+    %hold on
+    %plot(dates(1:end), Upcadlogsum(:, i))
     title(['h = ',num2str(i)])
 end
 
@@ -109,9 +118,9 @@ figure
 for i = 1:h
     
     subplot(4, 3, i)
-    plot(dates(2:end), standardise(dUpcalog(:, i)))
+    plot(dates(1:end), standardise(utcsa(:, i)))
     hold on
-    plot(dates(2:end), standardise(Upcadlog(:, i)))
+    plot(dates(1:end), standardise(Uavg(:, i)))
     title(['h = ',num2str(i)])
 end
 

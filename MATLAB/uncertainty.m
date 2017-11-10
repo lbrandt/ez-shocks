@@ -148,17 +148,34 @@ dlogu = logu(2:end, :, :) - logu(1:end-1, :, :);
 dufac = zeros(T-1, N, h);
 
 Upca    = zeros(T, h);
+Upcascaled = zeros(T, h);
+
 Upcalog = zeros(T, h);
 Upcadlog = zeros(T-1, h);
 
 for i = 1:h
     
-    Upca(:, i)    = factors(Uind(:, :, i), 1, 2);
+    Ufac(:, i)    = factors(Uind(:, :, i), 1, 2);
     Upcalog(:, i) = factors(logu(:, :, i), 1, 2);
     Upcadlog(:, i) = factors(dlogu(:, :, i), 1, 2);
+    
+    % Flip Ufac if necessary
+    rho(i) = corr(Ufac(:, i), Uavg(:, i));
+    if rho < 0
+        Ufac = -Ufac;
+    end
+    
+    % Scale to Uavg  
+    % Which variance?
+    Upca(:, i) = standardise(Upca(:, i))* sqrt(var(Uavg(:, i))) + mean(Uavg(:, i));
 end
 
 dUpcalog = Upcalog(2:end, :) - Upcalog(1:end-1, :);
+
+
+
+
+
 
 
 for j = 1:h
