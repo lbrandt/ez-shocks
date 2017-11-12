@@ -68,8 +68,6 @@ end
 phif = companion(R, pf, fvar);
 
 
-
-
 %%%%
 % Compute uncertainty in macro variables
 
@@ -81,7 +79,7 @@ ut     = zeros(T, N, h);
 phiy   = sparse(py, py, 0);
 phi    = sparse(R*pf + py, R*pf + py, 0);
 
-phimat = cell(N,1);
+phisav = cell(N,1);
 
 for i = 1:N
     
@@ -115,14 +113,13 @@ for i = 1:N
            
            if j == 1
                ui = evh; % for h=1, Omega = Et[sigma2_y(t+h)]
-               %ui = evh/udiffmean(i);
            else
                ui = phi* ui* phi' + evh; % for h>1, Omega = phi* Et[sigma2_Y(t+h-1)]* phi + Et[sigma2_Y(t+h)]
            end
            
-           phimat{i} = phi;
+           phisav{i} = phi; % save phi matrices
            
-           ut(t, i, j) = ui(R*pf + 1, R*pf + 1); % Select element corresponding to yt, this is the squared uncertainty in this variable at time t looking h-steps ahead (?)
+           ut(t, i, j) = ui(R*pf + 1, R*pf + 1); % Select element corresponding to yt, this is the squared uncertainty in this variable at time t looking h-steps ahead
        end
     end
     
@@ -130,127 +127,38 @@ for i = 1:N
     
 end
 
+% Individual expected volatilities
 Uind = sqrt(ut);
-
 
 
 %%%%
 % Aggregate individual uncertainty
 % Simple average
-Uavg = squeeze(mean(Uind,2));
+Uavg  = squeeze(mean(Uind,2));
 
 
-% Principal component analysis
-% Transform individual uncertainties to logdiffs
-logu  = log(Uind(:, :, :));
-dlogu = logu(2:end, :, :) - logu(1:end-1, :, :);
-
-dufac = zeros(T-1, N, h);
+% Principal component analysis on logged variances
+logut  = log(ut(:, :, :));
 
 Upca    = zeros(T, h);
-Upcascaled = zeros(T, h);
-
-Upcalog = zeros(T, h);
-Upcadlog = zeros(T-1, h);
+Ufac    = zeros(T, h);
 
 for i = 1:h
     
-    Ufac(:, i)    = factors(Uind(:, :, i), 1, 2);
-    Upcalog(:, i) = factors(logu(:, :, i), 1, 2);
-    Upcadlog(:, i) = factors(dlogu(:, :, i), 1, 2);
+    Upca(:, i) = factors(logut(:, :, i), 1, 2);
     
     % Flip Ufac if necessary
-    rho(i) = corr(Ufac(:, i), Uavg(:, i));
+    rho = corr(Upca(:, i), Uavg(:, i));
     if rho < 0
-        Ufac = -Ufac;
+        Upca = -Upca;
     end
     
-    % Scale to Uavg  
-    % Which variance?
-    Upca(:, i) = standardise(Upca(:, i))* sqrt(var(Uavg(:, i))) + mean(Uavg(:, i));
+    % Scale to Uavg
+    Ufac(:, i) = exp( standardise(Upca(:, i))* std(log(Uavg(:, i))) + mean(log(Uavg(:, i))) );
 end
-
-dUpcalog = Upcalog(2:end, :) - Upcalog(1:end-1, :);
-
-
-
-
-
-
-
-for j = 1:h
-   logu = log(Uind(:, :, j));
-   dlogu(:, :, j)  = logu(2:end, :) - logu(1:end-1, :);
-   
-   
-   [de, du, dl, dv] = jln_factors(dlogu(:, :, j), 5, 2, 1);
-   
-   % Rotate estimate
-   rho     = corr(cumsum([0; du(:, 1)]), Uavg(:, j));
-   
-   if rho < 0
-       du = -du; 
-       dl = -dl; 
-   end
-   
-   ufac    = cumsum([zeros(1, size(du, 2)); du]);
-   dufac(:, :, j) = du;
-   dlam(:, :, j)  = dl;
-   deig(:, j)  = dv;
-   
-   % Calibrate to cross-section mean
-   sd      = std(Uavg(:, j));
-   mn      = mean(Uavg(:, j));
-   p0      = [1, 0.5];
-   opt     = optimset('tolfun', 1e-50, 'display','off');
-   [p, obj] = fminsearch(@(p)calibratef(p, ufac(:, 1), sd, mn), p0, opt);
-   Upca1(:, j) = exp((p(1)* ufac(:, 1) + p(2))./ 2); 
-end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-%%%%
-% Plot
-
-% Aggregate uncertainty, simple average
-figure
-for i = [1, 3, 12]
-    plot(dates, Uavg(:, i))
-    hold on
-end
-legend('show')
-
-
-% Single series uncertainty
-hselect = 12;
-
-figure
-for i = 1:10
-    plot(dates, Uind(:, i, hselect))
-    hold on
-end
-
 
 
 %%%%
 % Save results
 
-
-
-
-gy = svy(end - 3 + 1:end, :);
-save ut dates ut
-save geweke dates gy gf names
-
-
+save uncertainty dates Uavg Ufac ut phisav
