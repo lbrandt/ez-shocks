@@ -12,4 +12,21 @@ Adapted from Jurado, Ludvigson, Ng (2015) using code supplied by Serena Ng at:
 import_data.m
 ```
 
-2. Do something else
+2. Estimate number of latent factors in data and extract via PCA. Forecast macro variables and save prediction errors.
+
+```
+factors_forecast.m
+```
+
+3. Estimate latent stochastic volatility in prediction errors
+
+```
+svydraws.R
+svfdraws.R
+```
+
+3. Compute uncertainty in variables and build aggregate index
+
+```
+uncertainty.m
+```
