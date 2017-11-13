@@ -25,7 +25,7 @@ svydraws.R
 svfdraws.R
 ```
 
-3. Compute uncertainty in variables and build aggregate index
+4. Compute uncertainty in variables and build aggregate index
 
 ```
 uncertainty.m
