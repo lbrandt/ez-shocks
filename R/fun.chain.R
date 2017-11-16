@@ -55,6 +55,19 @@ fun.chain = function(x, y, overlap, forwards){
         }
       }
     }
+  }else if(forwards == 1){ # Linking forwards
+    
+    for(i in 1:series.length){
+      
+      if(overlap == 0){
+        
+        if(is.na(x[i]) & is.numeric(y[i]) & is.numeric(y[i-1]) == TRUE){
+          
+          x[i] = x[i-1]* y[i]/y[i-1]
+          
+        }
+      }
+    }
   }
   
   out = x
