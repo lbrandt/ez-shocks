@@ -1,4 +1,10 @@
 ################
+# General
+
+# Output
+*.pdf
+
+################
 # MATLAB
 
 # Autosave
