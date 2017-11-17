@@ -1,6 +1,8 @@
 # Check de_data2
 
 #rm(list=ls())
+
+
 load("de_data2.RData")
 
 

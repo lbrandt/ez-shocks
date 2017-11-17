@@ -27,8 +27,8 @@ te = last(dates)
 # Clean data and transform data
 data = datastream %>%
   
-  select(-starts_with("X__")) %>% # Delete separator columns
-  select(-starts_with("Code")) %>% # Delete date columns
+  select(-starts_with("X__")) %>% # Remove separator columns
+  select(-starts_with("Code")) %>% # Remove date columns
   
   # Replace R operator % in variable names
   rename(WGUN_TOTQ = "WGUN%TOTQ") %>%
