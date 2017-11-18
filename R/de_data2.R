@@ -6,11 +6,6 @@ require(tidyverse)
 require(readxl)
 
 
-# Read Pirschel-Wolters data for comparison
-pw_data_final <- read_excel("C:/Dateien/My Dropbox/Lennart/Thesis/Data/pw_data_final.xls", 
-                            sheet = "datafinal", range = "C90:EL189", col_names = FALSE, na = "NA")
-
-
 # Read raw data from datastream request file
 datastream = read_excel("C:/Dateien/My Dropbox/Lennart/Thesis/Data/DATASTREAM_REQUEST_QUARTERLY.xls", 
                         sheet = "de", col_names = TRUE, na = "NA", skip = 1)
@@ -85,20 +80,43 @@ data = data %>%
   select(-c(BDUSMC36B, BDUSMC31B, BDUSMC37B)) %>% # New turnover in construction
   select(-c(BDUSMB36B, BDUSMB31B, BDUSMB37B)) %>% # Old turnover in construction
   
-  select(-c(BDUSC.04O, BDUSCC04O)) %>% # Vacancies are in series BDQLM004O
-  select(-c(BDEA4001B, BDEA4100B, BDEA4170B, BDEA4220B)) %>% # Current account
+  select(-c(BDUSC.04O, BDUSCC04O)) %>% # Vacancies in BDQLM004O
+  select(-c(BDEA4001B, BDEA4100B, BDEA4170B, BDEA4220B)) %>% # Current account in BDBGDBAQB, BDBSVBAQB, BDBI1BAQB, BDBI2BAQB
+  select(-c(WGUS01NAG, WGUS02NAG, BDUSNA01G)) %>% # Unused IP
+  select(-c(BDWAGES.F)) %>% # Wages
 
   select(-starts_with("BDIFD")) # Survey indicators
 
 
 
 
+# Transform data into stationary series
+
+# Apply natural log to variables excluding interest rates and current account series
+lndata  = mutate_at(data, vars(-c(BDWU0898, BDWU0899, BDWU0900, BDWU0901, BDWU0902, BDWU0903, BDWU8606, BDWU8607, BDWU8608, # Interest rates
+                                 eonia, is1mo, is3mo, # Interest rates
+                                 BDBGDBAQB, BDBSVBAQB, BDBI1BAQB, BDBI2BAQB)), funs(log)) # Current account
+
+# Diff for stationarity
+dlndata  = data.frame(sapply(lndata, FUN = diff))
+dsurveys = data.frame(sapply(surveys, FUN = diff))
+
+
+
+
 # Save data to workspace and .csv
-save(dates, data, surveys, file = "de_data2.RData")
+save(dates, data, lndata, dlndata, surveys, dsurveys, file = "de_data2.RData")
 
-out.data    = add_column(data, dates = dates, .before = 1)
-out.surveys = add_column(surveys, dates = dates, .before = 1)
+out.data     = add_column(data, dates = dates, .before = 1)
+out.dlndata  = add_column(dlndata, dates = dates[2:108], .before = 1)
 
-write.csv(out.data, file = 'de_data2.csv', row.names = FALSE)
+out.surveys  = add_column(surveys, dates = dates, .before = 1)
+out.dsurveys = add_column(dsurveys, dates = dates[2:108], .before = 1)
+
+
+write.csv(out.data, file = 'de_data.csv', row.names = FALSE)
+write.csv(out.dlndata, file = 'de_data2.csv', row.names = FALSE)
+
 write.csv(out.surveys, file = 'de_surveys.csv', row.names = FALSE)
+write.csv(out.dsurveys, file = 'de_surveys2.csv', row.names = FALSE)
 
