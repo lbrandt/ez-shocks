@@ -20,10 +20,12 @@ de.T = dim(data)[1]
 de.N = dim(data)[2] 
 
 
-# Check if columns contain observations that fulfil some condition
-test1 = is.na(x)
-test2 = colSums(test1) # Count cases
-test3 = test2[test2>0] # Extract cases
+# Check if rows/columns contain observations that fulfil some condition
+test1 = is.na(dlndata)
+rowSums(test1) # Count cases
+
+
+
 
 # Restrict sample to 1991Q1-2016Q4
 x = slice(data, 1:(de.T-4))

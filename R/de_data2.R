@@ -114,6 +114,11 @@ out.surveys  = add_column(surveys, dates = dates, .before = 1)
 out.dsurveys = add_column(dsurveys, dates = dates[2:108], .before = 1)
 
 
+# Drop observations that contain NA elements
+out.dlndata  = slice(out.dlndata, 1:(107-3))
+out.dsurveys = slice(out.dsurveys, 1:(107-3))
+
+
 write.csv(out.data, file = 'de_data.csv', row.names = FALSE)
 write.csv(out.dlndata, file = 'de_data2.csv', row.names = FALSE)
 
