@@ -104,20 +104,33 @@ dsurveys = data.frame(sapply(surveys, FUN = diff))
 
 
 
-# Save data to workspace and .csv
+# Inquire position of the first and last row which contains no empty cells in array
+ta.index = first(which( rowSums(is.na(data)) == 0 ))
+te.index = last(which( rowSums(is.na(data)) == 0 ))
+
+# Construct time range of largest complete dataset
+ta = dates[ta.index]
+te = dates[te.index]
+
+
+
+# Save data to workspace
 save(dates, data, lndata, dlndata, surveys, dsurveys, file = "de_data2.RData")
 
-out.data     = add_column(data, dates = dates, .before = 1)
-out.dlndata  = add_column(dlndata, dates = dates[2:108], .before = 1)
 
-out.surveys  = add_column(surveys, dates = dates, .before = 1)
-out.dsurveys = add_column(dsurveys, dates = dates[2:108], .before = 1)
+# Save data and varnames to csv
+out.varnames = colnames(data)
+out.dates    = dates[ta.index:te.index]
 
+out.data      = data[ta.index:te.index, ]
+out.dlndata  = dlndata[ta.index:te.index-1, ] # diffed series are one observation shorter
 
-# Drop observations that contain NA elements
-out.dlndata  = slice(out.dlndata, 1:(107-3))
-out.dsurveys = slice(out.dsurveys, 1:(107-3))
+out.surveys  = surveys[ta.index:te.index, ] # surveys still contain NA elements!
+out.dsurveys = dsurveys[ta.index:te.index-1, ]
 
+# Write .csv
+write.csv(out.dates, file = 'de_dates.csv', row.names = FALSE)
+write.csv(out.varnames, file = 'de_varnames.csv', row.names = FALSE)
 
 write.csv(out.data, file = 'de_data.csv', row.names = FALSE)
 write.csv(out.dlndata, file = 'de_data2.csv', row.names = FALSE)
