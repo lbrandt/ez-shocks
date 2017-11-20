@@ -129,12 +129,12 @@ out.surveys  = surveys[ta.index:te.index, ] # surveys still contain NA elements!
 out.dsurveys = dsurveys[ta.index:te.index-1, ]
 
 # Write .csv
-write.csv(out.dates, file = 'de_dates.csv', row.names = FALSE)
-write.csv(out.varnames, file = 'de_varnames.csv', row.names = FALSE)
+write.table(out.dates, file = 'de_dates.csv', row.names = FALSE, col.names = FALSE, sep = ',')
+write.table(out.varnames, file = 'de_varnames.csv', row.names = FALSE, col.names = FALSE, sep = ',')
 
-write.csv(out.data, file = 'de_data.csv', row.names = FALSE)
-write.csv(out.dlndata, file = 'de_data2.csv', row.names = FALSE)
+write.table(out.data, file = 'de_data.csv', row.names = FALSE, col.names = FALSE, sep = ',')
+write.table(out.dlndata, file = 'de_data2.csv', row.names = FALSE, col.names = FALSE, sep = ',')
 
-write.csv(out.surveys, file = 'de_surveys.csv', row.names = FALSE)
-write.csv(out.dsurveys, file = 'de_surveys2.csv', row.names = FALSE)
+write.table(out.surveys, file = 'de_surveys.csv', row.names = FALSE, col.names = FALSE, sep = ',')
+write.table(out.dsurveys, file = 'de_surveys2.csv', row.names = FALSE, col.names = FALSE, sep = ',')
 
