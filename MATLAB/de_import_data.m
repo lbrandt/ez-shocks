@@ -15,7 +15,8 @@
 x = csvread('de_data2.csv'); % logdiffs
 
 [T, N]   = size(x);
-ta       = dates{2}; % diffed series lack one observation compared to raw dataset
+dates    = dates(2:end);
+ta       = dates{1}; % diffed series lack one observation compared to raw dataset
 te       = dates{end};
 
 
@@ -46,3 +47,5 @@ varnames = strrep(varnames, '’', '');
 %fprintf('Quarterly series from %s to %s \n', datestr(ta), datestr(te));
 fprintf('Quarterly series from %s to %s \n', ta, te);
 fprintf('Sample: T = %d, N = %d \n', T, N);
+
+save de_data dates varnames x

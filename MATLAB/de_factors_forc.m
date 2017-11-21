@@ -9,7 +9,7 @@
 clear; clc;
 
 % Load and manipulate data in import_data. Call script here:
-de_import_data
+load de_data
 
 
 %%%%
@@ -49,7 +49,7 @@ zt       = [Fhat, Fhat(:, 1).^2, Ghat(:, 1)];
 [~, M]   = size(zt);
 
 % Set dependent variables
-yt       = standardise(x(:, 1:132)); % only macro data
+yt       = standardise(x);
 [T, N]   = size(yt);
 
 py       = 4; % number of depvar lags
@@ -105,7 +105,7 @@ end
 maxlag = max([py, pz, pf]); % Maximum lag length out of all regressions run in file
 dates = dates(1+maxlag:end);
 
-save factors_forc dates yfit ffit ybetas fbetas vyt vft names vartype py pz pf zt x ymodels
+save de_factors_forc dates yfit ffit ybetas fbetas vyt vft varnames py pz pf zt x ymodels
 
 % Also write to .txt file for R code
 %dlmwrite('factors_vyt.txt',vyt,'delimiter','\t','precision',17);
@@ -117,12 +117,11 @@ datetable = array2table(string(dates), 'VariableNames', {'Date'});
 
 
 % vyt factor model prediction errors
-ynames = varnames(1:132); % only macro variables
 
-vytable = array2table(vyt, 'VariableNames', ynames);
+vytable = array2table(vyt, 'VariableNames', varnames);
 vytable = [datetable, vytable];
 
-writetable(vytable, 'factors_vyt.csv');
+writetable(vytable, 'de_factors_vyt.csv');
 
 
 % vft factor AR(4) prediction errors
@@ -133,6 +132,6 @@ fnames = cellstr(fnames);
 vftable = array2table(vft, 'VariableNames', fnames);
 vftable = [datetable, vftable];
 
-writetable(vftable, 'factors_vft.csv');
+writetable(vftable, 'de_factors_vft.csv');
 
 
