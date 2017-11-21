@@ -90,7 +90,7 @@ data = data %>%
 
 
 
-# Transform data into stationary series
+# Build dataset for factor analysis 
 
 # Apply natural log to variables excluding interest rates and current account series
 lndata  = mutate_at(data, vars(-c(BDWU0898, BDWU0899, BDWU0900, BDWU0901, BDWU0902, BDWU0903, BDWU8606, BDWU8607, BDWU8608, # Interest rates
@@ -101,7 +101,11 @@ lndata  = mutate_at(data, vars(-c(BDWU0898, BDWU0899, BDWU0900, BDWU0901, BDWU09
 dlndata  = data.frame(sapply(lndata, FUN = diff))
 dsurveys = data.frame(sapply(surveys, FUN = diff))
 
+# Assign descriptive column names
+varlist = read.csv("de_varlist.csv")
+varnames = varlist[2]
 
+colnames(dlndata) = varnames[[1]]
 
 
 # Inquire position of the first and last row which contains no empty cells in array
@@ -119,17 +123,20 @@ save(dates, data, lndata, dlndata, surveys, dsurveys, file = "de_data2.RData")
 
 
 # Save data and varnames to csv
-out.varnames = colnames(data)
-out.dates    = dates[ta.index:te.index]
+out.dsrequest = colnames(datastream)
+out.varcodes  = colnames(data)
+out.varnames  = colnames(dlndata)
+out.dates     = dates[ta.index:te.index]
 
-out.data      = data[ta.index:te.index, ]
-out.dlndata  = dlndata[ta.index:te.index-1, ] # diffed series are one observation shorter
+out.data      = data[ta.index:te.index, ] # level data
+out.dlndata   = dlndata[ta.index:te.index-1, ] # diffed series are one observation shorter
 
-out.surveys  = surveys[ta.index:te.index, ] # surveys still contain NA elements!
-out.dsurveys = dsurveys[ta.index:te.index-1, ]
+out.surveys   = surveys[ta.index:te.index, ] # surveys still contain NA elements!
+out.dsurveys  = dsurveys[ta.index:te.index-1, ]
 
 # Write .csv
 write.table(out.dates, file = 'de_dates.csv', row.names = FALSE, col.names = FALSE, sep = ',')
+write.table(out.dsrequest, file = 'de_request.csv', row.names = FALSE, col.names = FALSE, sep = ',')
 write.table(out.varnames, file = 'de_varnames.csv', row.names = FALSE, col.names = FALSE, sep = ',')
 
 write.table(out.data, file = 'de_data.csv', row.names = FALSE, col.names = FALSE, sep = ',')
