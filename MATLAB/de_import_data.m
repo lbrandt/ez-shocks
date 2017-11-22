@@ -15,15 +15,12 @@
 x = csvread('de_data2.csv'); % logdiffs
 
 [T, N]   = size(x);
-dates    = dates(2:end);
-ta       = dates{1}; % diffed series lack one observation compared to raw dataset
-te       = dates{end};
-
+dates    = dates(2:end); % diffed series lack one observation compared to raw dataset
 
 % Dates in MATLAB datetime format
-%ta = datetime(1991, 06, 30);
-%te = datetime(2017, 03, 31);
-%dates = dateshift((ta:calquarters(1):te)', 'end', 'month');
+ta = datetime(dates{1}, 'InputFormat', 'QQ yyyy', 'Format', 'QQQ yyyy');
+te = datetime(dates{end}, 'InputFormat', 'QQ yyyy', 'Format', 'QQQ yyyy');
+dates = (ta:calquarters(1):te)';
 
 
 % Format names such that they are permissible MATLAB varnames

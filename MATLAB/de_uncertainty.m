@@ -5,13 +5,13 @@
 %clear; clc;
 
 % Load data
-load factors_forc;
+load de_factors_forc;
 
-sf = csvread('svflatent.csv', 1); % Estimates of latent process s(t)
-tf = csvread('svfparams.csv', 1); % AR(1) parameter estimators
+sf = csvread('de_svflatent.csv', 1); % Estimates of latent process s(t)
+tf = csvread('de_svfparams.csv', 1); % AR(1) parameter estimators
 
-sy = csvread('svylatent.csv', 1);
-ty = csvread('svyparams.csv', 1);
+sy = csvread('de_svylatent.csv', 1);
+ty = csvread('de_svyparams.csv', 1);
 
 
 
@@ -161,4 +161,4 @@ end
 %%%%
 % Save results
 
-save uncertainty dates Uavg Ufac ut phisav
+save de_uncertainty dates Uavg Ufac ut phisav

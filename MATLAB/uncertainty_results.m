@@ -8,6 +8,8 @@
 load jlnresults % aggu
 load uncertainty
 
+load de_uncertainty
+
 
 
 
@@ -35,7 +37,7 @@ legend('show')
 
 subplot(2,1,2);
 for i = [1, 3, 12]
-    plot(dates, utcsa(:, i))
+    plot(dates, Ufac(:, i))
     hold on
 end
 legend('show')
@@ -45,7 +47,7 @@ legend('show')
 
 % Single series uncertainty
 hselect = 12;
-vselect = 1;
+vselect = 2;
 
 figure
 for i = 1:hselect

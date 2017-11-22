@@ -52,7 +52,7 @@ zt       = [Fhat, Fhat(:, 1).^2, Ghat(:, 1)];
 yt       = standardise(x);
 [T, N]   = size(yt);
 
-py       = 4; % number of depvar lags
+py       = 2; % number of depvar lags
 pz       = 2; % number of predictor lags
 maxlag   = max(py, pz);
 
@@ -83,7 +83,7 @@ end
 
 % Generate AR(4) errors for Predictor set zt
 [T, R]   = size(zt);
-pf       = 4;
+pf       = 2;
 L        = fix(4*(T/100)^(2/9));
 
 fbetas   = zeros(1 + pf, R); % Parameter vectors of single equations in columns
