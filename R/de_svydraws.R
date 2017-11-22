@@ -32,7 +32,7 @@ for (i in 1:obs.N){
 
 # Run MCMC algorithm and store draws
 S    = 50000
-burn = 50000 # MCMC with [50000, 50000] takes roughly 50 seconds per iteration.
+burn = 50000 # MCMC with [50000, 50000] takes roughly 10 seconds per variable.
 
 h    = matrix(0, obs.T, obs.N) # Latent variable ht
 t    = matrix(0, 3, obs.N) # Parameter vector theta
