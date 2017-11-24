@@ -26,9 +26,8 @@ te = last(dates)
 data = datastream %>%
   
   select(-starts_with("X__")) %>% # Remove empty columns
-  select(-starts_with("Code")) %>% # Remove date columns
-  select(-c(BDGDP...D,BDCNPER.D,BDCNGOV.D,BDGCMAC.D,BDGCCON.D,BDGCINT.D,BDEXNGS.D,BDIMNGS.D,BDVAPAAFE,BDVAPAECE,
-            BDVAPACND,BDVAPATFD,BDVAPAICD,BDVAPAFID,BDVAPARED,BDVAPASTD,BDVAPAAHD,BDVAPAOSD,BDVAPAICB,BDVAPAFIB))
+  select(-starts_with("Code")) # Remove date columns
+
   
 data2 = datastream_gs %>%
   
@@ -39,6 +38,8 @@ data2 = datastream_gs %>%
 # Which series are in both datesets?
 var1 = colnames(data)
 var2 = colnames(data2)
+
+test2 = cbind(c(var1, , var2)
 
 test1 = matrix(NA,100,105)
 
