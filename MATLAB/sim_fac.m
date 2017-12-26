@@ -1,14 +1,16 @@
 %%%%
 % Static factor model
 
+%clear;clc;
+
 % Simulate static factor model with R latent factors and M observed variables
 N = 100;
 
 % Observed variables X
-M = 8;
+M = 5;
 
 % Common factors F
-R = 4;
+R = 2;
 
 %%%% function random() requires Statistics and Machine Learning Toolbox!
 %fdist = 'beta';
@@ -16,6 +18,12 @@ R = 4;
 %fpara = 1;
 %fparb = 4;
 
+%%%% LeSage toolbox contains dist_rnd functions, use beta_rnd
+%beta_rnd
+
+
+% Vanilla MATLAB supplies Normal random numbers via randn
+% Parametrisation via discrete Uniform
 fmu = randi([-5, 5], 1, R);
 fsd = randi(6, 1, R);
 
@@ -84,18 +92,21 @@ fprintf('min(xrho) = %d, max(xrho) = %d \n', min(min(xrho)), max(max(xrho - eye(
 %%%%
 % PCA
 demean = 2; % Standardise variables
-Rhat = 4; % Number of principal components to be extracted
+Rhat = 3; % Number of principal components to be extracted
 
 [Fhat, Lhat, Ehat, eigval] = factors(X, Rhat, demean);
 
 % Analyse results
 % Matrix of correlations between true factors and estimated factors
 fcorrmat = zeros(R, Rhat);
+frmse    = zeros(R, Rhat);
 
 for i = 1:R
     for j = 1:Rhat
         corrcoeffs     = corrcoef(F(:, i), Fhat(:, j));
-        fcorrmat(i, j) = corrcoeffs(2, 1);
+        fcorrmat(i, j) = corrcoeffs(2, 1); % Extract correlation
+        
+        frmse(i, j)    = rmse(standardise(F(:, i)), standardise(Fhat(:, j)));
     end
 end
 
@@ -107,18 +118,15 @@ for i = 1:R
         
         plot(standardise(F(:, i)))
         hold on
-        plot(Fhat(:, j))
-        title(['F(', num2str(i), '), Fhat(', num2str(j),'), rho = ', num2str(fcorrmat(i, j))])
+        plot(standardise(Fhat(:, j)))
+        title(['F(', num2str(i), '), Fhat(', num2str(j),'); rho = ', num2str(fcorrmat(i, j)), ', RMSE = ', num2str(frmse(i, j))])
         
         subplotindex = subplotindex + 1;
     end
 end
-        
-plot(standardise(F(:, 1)))
-%hold on
-%plot(Fhat(:, 1))
-hold on
-plot(Fhat(:, 2))
+
+% Did PCA recover some rotation of the underlying factor space?
+[frmse1, bias, var] = rmse(F(:, 1), Fhat(:, 1));
 
 
 % Structural errors ~N(0, s^2)
