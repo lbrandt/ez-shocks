@@ -92,7 +92,7 @@ fprintf('min(xrho) = %d, max(xrho) = %d \n', min(min(xrho)), max(max(xrho - eye(
 %%%%
 % PCA
 demean = 2; % Standardise variables
-Rhat = 3; % Number of principal components to be extracted
+Rhat = 2; % Number of principal components to be extracted
 
 [Fhat, Lhat, Ehat, eigval] = factors(X, Rhat, demean);
 
@@ -126,26 +126,6 @@ for i = 1:R
 end
 
 % Did PCA recover some rotation of the underlying factor space?
-[frmse1, bias, var] = rmse(F(:, 1), Fhat(:, 1));
-
-
-% Structural errors ~N(0, s^2)
-S = [2, 0; 0, 1]';
-E = normrnd(0, 1, [N, 2]) *S;
-
-% Exogeneous relationship Beta
-B = [0.4, 0; 0, -0.6];
-
-% Endogeneous relationship Gamma
-G = [1, 0; 0, 1];
-
-% Model GY' = BX' + E
-Y = (B*X' + E')';
-
-scatter(X(:, 1), Y(:, 1))
-
-bhat = inv(X'*X)* X'*Y;
-
-
+[frmse1, fbias, fvar] = rmse(F(:, 1), Fhat(:, 1));
 
 
