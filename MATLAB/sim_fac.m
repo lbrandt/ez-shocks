@@ -88,6 +88,7 @@ fprintf('min(xrho) = %d, max(xrho) = %d \n', min(min(xrho)), max(max(xrho - eye(
 %%%% corrplot requires Econometrics Toolbox!
 %corrplot(X)
 
+
 %%%%
 % PCA
 demean = 2; % Standardise variables
@@ -130,7 +131,7 @@ end
 
 %%%%
 % Duplicate series
-% Analyse factor loadings
+% Factor loadings
 Lhat
 
 % Here, first observable X_1 is highly correlated with second factor. Thus,
@@ -178,6 +179,60 @@ for i = 1:R
         
         plot(squeeze(abs(fcorrmat2(i, j, :))))
         %plot(squeeze(frmse2(i, j, :)))
+        title(['F(', num2str(i), '), Fhat(', num2str(j), ')'])
+        
+        subplotindex = subplotindex + 1;
+    end
+end
+
+
+
+
+%%%%
+% Add disturbed copies of raw factors to data
+% Does this approximate including survey indicators?
+
+% When a factor is directly included in the data set (plus some Normal
+% disturbance, its representation by the first extracted component improves
+% almost monotonously. The identification of the second factor fluctuates
+% but does not suffer systematically. Therefore one might assume that it is
+% not harmful to identification to include survey indicators in the data
+% set even if they might already represent the underlying factors.
+% A linear combination of the two factors does not significantly worsen
+% convergence either. However, a product of the two factors apparently
+% dilutes the data in such a way that identification deteriorates a lot. 
+X3 = X;
+
+addfactor = 20;
+
+fcorrmat3 = zeros(R, Rhat, addfactor);
+frmse3    = zeros(R, Rhat, addfactor);
+
+for s = 1:addfactor
+    
+    X3 = [X3, F(:, 1) + F(:, 2) + randn(N, 1)];
+    
+    [Fhat3, Lhat3, Ehat3, eigval3] = factors(X3, Rhat, demean);
+    
+    for i = 1:R
+        for j = 1:Rhat
+            corrcoeffs3 = corrcoef(F(:, i), Fhat3(:, j));
+            fcorrmat3(i, j, s) = corrcoeffs3(2, 1); % Extract correlation
+            
+            frmse3(i, j, s)    = rmse(standardise(F(:, i)), standardise(Fhat3(:, j)));
+        end
+    end
+    
+end
+    
+figure
+subplotindex = 1;
+for i = 1:R
+    for j = 1:Rhat
+        subplot(R, Rhat, subplotindex)
+        
+        plot(squeeze(abs(fcorrmat3(i, j, :))))
+        %plot(squeeze(frmse3(i, j, :)))
         title(['F(', num2str(i), '), Fhat(', num2str(j), ')'])
         
         subplotindex = subplotindex + 1;
