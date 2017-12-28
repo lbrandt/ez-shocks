@@ -8,6 +8,7 @@
 
 % German data
 %clear; clc;
+%addpath('..\R;..\MATLAB')
 
 [~, names, ~] = xlsread('de_varnames.csv');
 [~, dates, ~] = xlsread('de_dates.csv');
