@@ -86,7 +86,7 @@ fprintf('min(xrho) = %d, max(xrho) = %d \n', min(min(xrho)), max(max(xrho - eye(
 %scatter(X(:, 1), X(:, 2))
 
 %%%% corrplot requires Econometrics Toolbox!
-%corrplot(X)
+corrplot(X)
 
 
 %%%%
@@ -132,7 +132,7 @@ end
 %%%%
 % Duplicate series
 % Factor loadings
-Lhat
+disp(Lhat)
 
 % Here, first observable X_1 is highly correlated with second factor. Thus,
 % saturate X matrix with X_1 and check stability of factor estimators. When
