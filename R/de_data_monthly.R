@@ -47,6 +47,9 @@ te = last(dates)
 # Clean data and transform data
 data = datastream_de %>%
   
+  # Replace R operator % in variable names
+  rename(WGUN_TOTQ = "WGUN%TOTQ") %>%
+  
   select(-starts_with("X__")) %>% # Remove empty columns
   select(-starts_with("Code")) # Remove date columns
 
@@ -61,7 +64,7 @@ data2 = datastream_gs %>%
 var1 = colnames(data)
 var2 = colnames(data2)
 
-test2 = cbind(c(var1, , var2)
+test2 = cbind(c(var1, var2))
 
 test1 = matrix(NA,100,105)
 
@@ -73,9 +76,14 @@ for(i in 1:100){
   }
 }
 
-
+sum(test1)
 
 tindex = which(test1, arr.ind = TRUE)
+
+# There are 8 series which are in both data sets. Merging should result in a 323x197 df
+data3 = merge(data, data2)
+
+
 
 ta.index = first(which( rowSums(is.na(data)) == 0 ))
 te.index = last(which( rowSums(is.na(data)) == 0 ))
@@ -83,16 +91,8 @@ te.index = last(which( rowSums(is.na(data)) == 0 ))
 
 
 
-  # Replace R operator % in variable names
-  rename(WGUN_TOTQ = "WGUN%TOTQ") %>%
   
-  # Aggregate value added
-  mutate(bwfinanzverm = (BDVAPAICD*BDVAPAICB + BDVAPAFID*BDVAPAFIB + BDVAPARED*BDVAPAREB + BDVAPASTD*BDVAPASTB)/
-                              (BDVAPAICB + BDVAPAFIB + BDVAPAREB + BDVAPASTB)) %>%
-  mutate(bwoeffprivdl = (BDVAPAAHD*BDVAPAAHB + BDVAPAOSD*BDVAPAOSB)/ (BDVAPAAHB + BDVAPAOSB)) %>%
-  
-  # Generate price index investment machinery and equipment
-  mutate(piar = BDGCMAC.B/BDGCMAC.D*100)
+
 
 
 
@@ -120,14 +120,10 @@ data$toconstpub = fun.chain(data$BDUSMC37B, data$BDUSMB37B, 0, 0)
 surveys = select(data, starts_with("BDIFD"))
 
 
-
+View(colnames(data))
 
 # Remove unnecessary or discontinued series from data
 data = data %>%
-  
-  select(-c(BDVAPAICD, BDVAPAFID, BDVAPARED, BDVAPASTD, BDVAPAICB, BDVAPAFIB, BDVAPAREB, BDVAPASTB)) %>% # bwfinanzverm
-  select(-c(BDVAPAAHD, BDVAPAOSD, BDVAPAAHB, BDVAPAOSB)) %>% # bwoeffprivdl
-  select(-c(BDGCMAC.B, BDGCMAC.D)) %>% # piar
   
   select(-c(BDIPMAN.G__1)) %>% # Duplicate series
   select(-c(BDGOVBALA, BDBQ9059A, BDGGOVBLA)) %>% # Government balance
