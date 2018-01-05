@@ -7,10 +7,10 @@
 
 # Set working directory to script file location
 
-# Retrieve script location if file is called via source()
-location.thisfile = dirname(sys.frame(1)$ofile)
 # Retrieve script location when code is run within RStudio
 location.thisfile = dirname(rstudioapi::getActiveDocumentContext()$path)
+# Retrieve script location if file is called via source()
+location.thisfile = dirname(sys.frame(1)$ofile)
 
 # Setting working directory to file location
 setwd(location.thisfile)
