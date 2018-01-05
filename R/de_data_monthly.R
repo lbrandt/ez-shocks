@@ -6,24 +6,42 @@ require(tidyverse)
 require(readxl)
 
 
-# Read raw data from datastream request file
-datastream = read_excel("C:/Dateien/My Dropbox/Lennart/Thesis/Data/DATASTREAM_REQUEST_MONTHLY.xls", 
-                        sheet = "de", col_names = TRUE, na = "NA", skip = 1)
-#View(datastream)
+# Retrieve script location if file is called via source()
+location.thisfile = dirname(sys.frame(1)$ofile)
 
-datastream_gs = read_excel("C:/Dateien/My Dropbox/Lennart/Thesis/Data/DATASTREAM_REQUEST_MONTHLY.xls", 
-                          sheet = "de2", col_names = TRUE, na = "NA", skip = 1)
+# Retrieve script location when code is run within RStudio
+location.thisfile = dirname(rstudioapi::getActiveDocumentContext()$path)
+
+# Setting working directory to file location
+setwd(location.thisfile)
+
+# Set location of data relative to working directory which contains this script
+location.data = normalizePath(file.path("..", "..", "..", "Data"), winslash = "/")
+
+# Read raw data from datastream request file
+datastream_de = read_excel(file.path(location.data, "DATASTREAM_REQUEST_MONTHLY.xls"), 
+                           sheet = "de", col_names = TRUE, na = "NA", skip = 1)
+
+datastream_gs = read_excel(file.path(location.data, "DATASTREAM_REQUEST_MONTHLY.xls"), 
+                           sheet = "de2", col_names = TRUE, na = "NA", skip = 1)
+
+
+# datastream_de = read_excel("C:/Dateien/My Dropbox/Lennart/Thesis/Data/DATASTREAM_REQUEST_MONTHLY.xls", 
+#                           sheet = "de", col_names = TRUE, na = "NA", skip = 1)
+# 
+# datastream_gs = read_excel("C:/Dateien/My Dropbox/Lennart/Thesis/Data/DATASTREAM_REQUEST_MONTHLY.xls", 
+#                           sheet = "de2", col_names = TRUE, na = "NA", skip = 1)
 
 
 
 # Extract dates
-dates = datastream[[1]]
+dates = datastream_de[[1]]
 ta = first(dates)
 te = last(dates)
 
 
 # Clean data and transform data
-data = datastream %>%
+data = datastream_de %>%
   
   select(-starts_with("X__")) %>% # Remove empty columns
   select(-starts_with("Code")) # Remove date columns
