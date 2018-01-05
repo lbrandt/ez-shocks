@@ -5,14 +5,28 @@
 
 #rm(list=ls())
 
+# Set working directory to script file location
+
+# Retrieve script location if file is called via source()
+location.thisfile = dirname(sys.frame(1)$ofile)
+# Retrieve script location when code is run within RStudio
+location.thisfile = dirname(rstudioapi::getActiveDocumentContext()$path)
+
+# Setting working directory to file location
+setwd(location.thisfile)
+
+# Set location of MATLAB files relative to working directory which contains this script
+location.matlab = normalizePath(file.path("..", "MATLAB"), winslash = "/")
+
+
 
 # Initialization
 require(stochvol)
-options(digits=17)
+options(digits = 17)
 set.seed(1000) # for replication
 
 # KE file
-vt = read.csv(header = TRUE, sep = ",", "C:/Dateien/My Dropbox/Lennart/Thesis/Code/ez-shocks/MATLAB/de_factors_vft.csv")
+vt = read.csv(header = TRUE, sep = ",", file.path(location.matlab, "de_factors_vft.csv"))
 
 # Remove dates vector
 vt = vt[, -1]
