@@ -16,8 +16,8 @@ load("pw_data_final.RData")
 #save(pw_data_final, file = "pw_data_final.RData")
 
 
-de.T = dim(data)[1]
-de.N = dim(data)[2] 
+de.T = dim(data2)[1]
+de.N = dim(data2)[2] 
 
 
 # Check if rows/columns contain observations that fulfil some condition
@@ -28,22 +28,22 @@ rowSums(test1) # Count cases
 
 
 # Restrict sample to 1991Q1-2016Q4
-x = slice(data, 1:(de.T-4))
+x = slice(data2, 1:(de.T-5))
 
 
 
 
 
 # Plot raw series
-path = file.path(getwd(), paste("de_data_plot.pdf"))
+path = file.path(getwd(), paste("de_gsdata_plot.pdf"))
 pdf(file = path)
 
 par(mfrow = c(3,2))
 
 for(i in 1:de.N){
 
-  plot(data[[i]], type = "l", col = "blue", xlab = "Time", ylab = "Variable",
-       main = colnames(data[i]), lwd = 2)
+  plot(data2[[i]], type = "l", col = "blue", xlab = "Time", ylab = "Variable",
+       main = colnames(data2[i]), lwd = 2)
   #lines(n, Y2, col = "green", lwd = 2)
   #legend("topright", legend = c("T_n", "T'_n"), fill = c("blue", "green"))
   #box()

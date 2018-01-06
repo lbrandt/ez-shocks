@@ -56,6 +56,9 @@ data = datastream_de %>%
   
 data2 = datastream_gs %>%
   
+  # Replace R operator % in variable names
+  rename(BDUN_TOTQ = "BDUN%TOTQ") %>%
+  
   select(-starts_with("X__")) %>% # Remove empty columns
   select(-starts_with("Code")) # Remove date columns
 
@@ -99,6 +102,119 @@ te.index = last(which( rowSums(is.na(data)) == 0 ))
 
 # Extending time series via growth rates of related variables
 source("fun.chain.R")
+
+# Chain link labour market data
+data2$constrempl = fun.chain(data2$BDUSMC01B, data2$BDUSMB01B, 0, 0)
+data2$constrwage = fun.chain(data2$BDUSMC08B, data2$BDUSMB08B, 0, 0)
+data2$constrhour = fun.chain(data2$BDUSMC11B, data2$BDUSMB11B, 0, 0)
+data2$unemplmanu = fun.chain(data2$BDEMPMFTP, data2$BDEMPMF.P, 0, 0)
+
+# Chain link world trade indices
+data2$wtradeprod = fun.chain(data2$WDCPBPWWG, data2$WDCPBPW5G, 0, 0)
+data2$wtradebala = fun.chain(data2$WDCPBTBWG, data2$WDCPBTB5G, 0, 0)
+
+# Chain link short term interest rates with corresponding German rates
+data2$eonia = fun.chain(data2$BDSU0304R, data2$BDSU0101, 0, 0)
+data2$is1mo = fun.chain(data2$BDSU0310R, data2$BDSU0104, 0, 0)
+data2$is3mo = fun.chain(data2$BDSU0316R, data2$BDSU0107, 0, 0)
+
+
+View(colnames(data2))
+
+# Remove unnecessary or discontinued series from data
+data2 = data2 %>%
+  
+  select(-c(BDUSMC01B, BDUSMC08B, BDUSMC11B, BDEMPMFTP)) %>% # New labour market data
+  select(-c(BDUSMB01B, BDUSMB08B, BDUSMB11B, BDEMPMF.P)) %>% # Discontinued labour market data
+  
+  select(-c(BDSU0304R, BDSU0310R, BDSU0316R)) %>% # New short term interest rates
+  select(-c(BDSU0101, BDSU0104, BDSU0107, BDINTER3)) %>% # Old short term interest rates
+  
+  select(-c(WDCPBPWWG, WDCPBTBWG)) %>% # New world trade indices
+  select(-c(WDCPBPW5G, WDCPBTB5G)) %>% # Discontinued world trade indices
+  
+  
+  select(-c(BDES7IVPG, BDES77FBG)) %>% # Building permits
+  select(-c(BDI..NELF, BDI..RELF)) %>% # Alternative FX computation
+  select(-c(BDESPPIEF, BDESPPITF, BDESPPIDF, BDESPPINF, BDCPSERVF)) # Prices
+
+
+
+#### Add more finance from pw data
+
+
+# Build dataset for factor analysis 
+
+# Apply natural log to variables excluding interest rates and survey data
+lndata2 = mutate_at(data2, vars(-c(BDIFDCTNQ, BDIFOBUSQ, BDIFOMTAQ, BDIFORTAQ, BDIFOBDOQ, BDIFOWHAQ, # Ifo Business Conditions
+                                   BDIFDCTIQ, BDIFDCBIQ, BDIFDCPIQ, BDIFDCCIQ, BDIFDCDIQ, BDIFDCEIQ, # Ifo Construction
+                                   BDIFDMTFQ, BDIFDMCFQ, BDIFDMPFQ, BDIFDMIFQ, BDIFDMDFQ, BDIFDMNFQ, # Ifo Consumption
+                                   BDIFDMTCQ, BDIFDMCCQ, BDIFDMPCQ, BDIFDMICQ, BDIFDMDCQ, BDIFDMNCQ, 
+                                   BDIFDFBCQ, BDIFRS.CQ, BDIFWS.CQ, 
+                                   BDEUSCMPQ, BDEUSCSAQ, BDEUSCFHQ, # DG ECFIN
+                                  
+                                   BDUN_TOTQ, BDESUNEMO, BDESUNUPQ, # UNP rates
+                                  
+                                   BDUUCG05P, # Short time workers
+                                  
+                                   eonia, is1mo, is3mo, BDWU0913, BDWU0915, BDWU8612, # Interest rates and yields
+                                   USTRCN3., USTRCN5., USTRCN10, BDWU0022, BDWU0004R
+                                   )), funs(log))
+
+
+# Diff for stationarity
+dlndata2  = data.frame(sapply(lndata2, FUN = diff))
+
+
+# # Assign descriptive column names
+# varlist = read.csv("de_varlist.csv")
+# varnames = varlist[2]
+# 
+# colnames(dlndata) = varnames[[1]]
+
+
+# Inquire position of the first and last row which contains no empty cells in array
+ta.index = first(which( rowSums(is.na(data2)) == 0 ))
+te.index = last(which( rowSums(is.na(data2)) == 0 ))
+
+# Construct time range of largest complete dataset
+ta = dates[ta.index]
+te = dates[te.index]
+
+
+
+# Save data to workspace
+save(dates, data2, lndata2, dlndata2, file = "de_gsdata.RData")
+
+
+# # Save data and varnames to csv
+# out.dsrequest = colnames(datastream)
+# out.varcodes  = colnames(data)
+# out.varnames  = colnames(dlndata)
+# out.dates     = dates[ta.index:te.index]
+# 
+# out.data      = data[ta.index:te.index, ] # level data
+out.dlndata2   = dlndata2[ta.index:te.index-1, ] # diffed series are one observation shorter
+# 
+# out.surveys   = surveys[ta.index:te.index, ] # surveys still contain NA elements!
+# out.dsurveys  = dsurveys[ta.index:te.index-1, ]
+# 
+# # Write .csv
+# write.table(out.dates, file = 'de_dates.csv', row.names = FALSE, col.names = FALSE, sep = ',')
+# write.table(out.dsrequest, file = 'de_request.csv', row.names = FALSE, col.names = FALSE, sep = ',')
+# write.table(out.varnames, file = 'de_varnames.csv', row.names = FALSE, col.names = FALSE, sep = ',')
+# 
+# write.table(out.data, file = 'de_data.csv', row.names = FALSE, col.names = FALSE, sep = ',')
+ write.table(out.dlndata2, file = 'de_gsdata.csv', row.names = FALSE, col.names = FALSE, sep = ',')
+# 
+# write.table(out.surveys, file = 'de_surveys.csv', row.names = FALSE, col.names = FALSE, sep = ',')
+# write.table(out.dsurveys, file = 'de_surveys2.csv', row.names = FALSE, col.names = FALSE, sep = ',')
+
+
+
+
+#####################################################################################################
+#### OLD
 
 # Chain link UNP with UNP in Western Germany
 data$unrate = fun.chain(data$BDUSCC02Q, data$WGUN_TOTQ, 0, 0)
@@ -199,3 +315,4 @@ write.table(out.dlndata, file = 'de_data2.csv', row.names = FALSE, col.names = F
 write.table(out.surveys, file = 'de_surveys.csv', row.names = FALSE, col.names = FALSE, sep = ',')
 write.table(out.dsurveys, file = 'de_surveys2.csv', row.names = FALSE, col.names = FALSE, sep = ',')
 
+#####################################################################################################
