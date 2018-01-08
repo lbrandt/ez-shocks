@@ -23,10 +23,10 @@ location.matlab = normalizePath(file.path("..", "MATLAB"), winslash = "/")
 # Initialization
 require(stochvol)
 options(digits = 17)
-set.seed(1000) # for replication
+set.seed(840) # for replication
 
 # KE file
-vt = read.csv(header = TRUE, sep = ",", file.path(location.matlab, "de_factors_vft.csv"))
+vt = read.csv(header = TRUE, sep = ",", file.path(location.matlab, "gs_factors_vft.csv"))
 
 # Remove dates vector
 vt = vt[, -1]
@@ -67,6 +67,6 @@ for (i in 1:obs.N){
 
 
 # Save results to .csv in format [estimators, variables]
-write.csv(h, file = 'de_svflatent.csv', row.names = FALSE)
-write.csv(t, file = 'de_svfparams.csv', row.names = FALSE)
-write.csv(g, file = 'de_svfgeweke.csv', row.names = FALSE)
+write.csv(h, file = 'gs_svflatent.csv', row.names = FALSE)
+write.csv(t, file = 'gs_svfparams.csv', row.names = FALSE)
+write.csv(g, file = 'gs_svfgeweke.csv', row.names = FALSE)

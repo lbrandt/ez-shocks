@@ -10,14 +10,37 @@
 %clear; clc;
 %addpath('..\R;..\MATLAB')
 
-[~, names, ~] = xlsread('de_varnames.csv');
-[~, dates, ~] = xlsread('de_dates.csv');
+gsdata   = table2array(readtable('gs_data.csv', 'ReadVariableNames', false));
+varnames = table2array(readtable('gs_varnames.csv', 'ReadVariableNames', false));
+dates    = datetime(table2array(readtable('gs_dates.csv', 'ReadVariableNames', false)));
 
-x = csvread('de_data2.csv'); % logdiffs
+[T, N]   = size(gsdata);
 
-[T, N]   = size(x);
-dates    = dates(2:end); % diffed series lack one observation compared to raw dataset
+fprintf('Monthly series from %s to %s \n', datestr(dates(1)), datestr(dates(end)));
+fprintf('Sample: T = %d, N = %d \n', T, N);
 
+% Format names such that they are permissible MATLAB varnames
+varnames = strrep(varnames, ' ', '_');
+varnames = strrep(varnames, '&', '_');
+varnames = strrep(varnames, '/', '_');
+varnames = strrep(varnames, '\', '_');
+varnames = strrep(varnames, ':', '');
+varnames = strrep(varnames, '.', '');
+varnames = strrep(varnames, ',', '');
+varnames = strrep(varnames, '+', '');
+varnames = strrep(varnames, '-', '');
+varnames = strrep(varnames, '<', '');
+varnames = strrep(varnames, '>', '');
+varnames = strrep(varnames, '(', '');
+varnames = strrep(varnames, ')', '');
+varnames = strrep(varnames, '’', '');
+
+save gs_data varnames dates gsdata
+
+
+
+
+%%%% OLD QUARTERLY
 % Dates in MATLAB datetime format
 ta = datetime(dates{1}, 'InputFormat', 'QQ yyyy', 'Format', 'QQQ yyyy');
 te = datetime(dates{end}, 'InputFormat', 'QQ yyyy', 'Format', 'QQQ yyyy');

@@ -9,8 +9,8 @@
 clear; clc;
 
 % Load and manipulate data in import_data. Call script here:
-load de_data
-
+load gs_data
+x = gsdata;
 
 %%%%
 % Find optimal number of factors according to Bai & Ng (2002)
@@ -40,7 +40,6 @@ fprintf('\nFactors via IC(%d): rhat = %d \n', gnum, rhat);
 sumeigval = cumsum(evf)/sum(evf);
 R2_static = sum(evf(1:rhat))/sum(evf);
 
-
 %%%%
 % Forecast
 
@@ -52,7 +51,7 @@ zt       = [Fhat, Fhat(:, 1).^2, Ghat(:, 1)];
 yt       = standardise(x);
 [T, N]   = size(yt);
 
-py       = 2; % number of depvar lags
+py       = 4; % number of depvar lags
 pz       = 2; % number of predictor lags
 maxlag   = max(py, pz);
 
@@ -83,7 +82,7 @@ end
 
 % Generate AR(4) errors for Predictor set zt
 [T, R]   = size(zt);
-pf       = 2;
+pf       = 4;
 L        = fix(4*(T/100)^(2/9));
 
 fbetas   = zeros(1 + pf, R); % Parameter vectors of single equations in columns
@@ -105,7 +104,7 @@ end
 maxlag = max([py, pz, pf]); % Maximum lag length out of all regressions run in file
 dates = dates(1+maxlag:end);
 
-save de_factors_forc dates yfit ffit ybetas fbetas vyt vft varnames py pz pf zt x ymodels
+save gs_factors_forc dates yfit ffit ybetas fbetas vyt vft varnames py pz pf zt x ymodels
 
 % Also write to .txt file for R code
 %dlmwrite('factors_vyt.txt',vyt,'delimiter','\t','precision',17);
@@ -115,13 +114,12 @@ save de_factors_forc dates yfit ffit ybetas fbetas vyt vft varnames py pz pf zt 
 % Write to .csv for further use
 datetable = array2table(string(dates), 'VariableNames', {'Date'});
 
-
 % vyt factor model prediction errors
 
 vytable = array2table(vyt, 'VariableNames', varnames);
 vytable = [datetable, vytable];
 
-writetable(vytable, 'de_factors_vyt.csv');
+writetable(vytable, 'gs_factors_vyt.csv');
 
 
 % vft factor AR(4) prediction errors
@@ -132,6 +130,6 @@ fnames = cellstr(fnames);
 vftable = array2table(vft, 'VariableNames', fnames);
 vftable = [datetable, vftable];
 
-writetable(vftable, 'de_factors_vft.csv');
+writetable(vftable, 'gs_factors_vft.csv');
 
 

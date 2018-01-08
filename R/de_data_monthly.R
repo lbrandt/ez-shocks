@@ -37,9 +37,8 @@ datastream_gs = read_excel(file.path(location.data, "DATASTREAM_REQUEST_MONTHLY.
 #                           sheet = "de2", col_names = TRUE, na = "NA", skip = 1)
 
 
-
 # Extract dates
-dates = datastream_de[[1]]
+dates = datastream_gs[[1]]
 ta = first(dates)
 te = last(dates)
 
@@ -61,41 +60,6 @@ data2 = datastream_gs %>%
   
   select(-starts_with("X__")) %>% # Remove empty columns
   select(-starts_with("Code")) # Remove date columns
-
-
-# Which series are in both datesets?
-var1 = colnames(data)
-var2 = colnames(data2)
-
-test2 = cbind(c(var1, var2))
-
-test1 = matrix(NA,100,105)
-
-for(i in 1:100){
-  
-  for(j in 1:105){
-    
-    test1[i,j] = var1[i] == var2[j]
-  }
-}
-
-sum(test1)
-
-tindex = which(test1, arr.ind = TRUE)
-
-# There are 8 series which are in both data sets. Merging should result in a 323x197 df
-data3 = merge(data, data2)
-
-
-
-ta.index = first(which( rowSums(is.na(data)) == 0 ))
-te.index = last(which( rowSums(is.na(data)) == 0 ))
-
-
-
-
-  
-
 
 
 
@@ -143,35 +107,7 @@ data2 = data2 %>%
 #### Add more finance from pw data
 
 
-# Build dataset for factor analysis 
-
-# Apply natural log to variables excluding interest rates and survey data
-lndata2 = mutate_at(data2, vars(-c(BDIFDCTNQ, BDIFOBUSQ, BDIFOMTAQ, BDIFORTAQ, BDIFOBDOQ, BDIFOWHAQ, # Ifo Business Conditions
-                                   BDIFDCTIQ, BDIFDCBIQ, BDIFDCPIQ, BDIFDCCIQ, BDIFDCDIQ, BDIFDCEIQ, # Ifo Construction
-                                   BDIFDMTFQ, BDIFDMCFQ, BDIFDMPFQ, BDIFDMIFQ, BDIFDMDFQ, BDIFDMNFQ, # Ifo Consumption
-                                   BDIFDMTCQ, BDIFDMCCQ, BDIFDMPCQ, BDIFDMICQ, BDIFDMDCQ, BDIFDMNCQ, 
-                                   BDIFDFBCQ, BDIFRS.CQ, BDIFWS.CQ, 
-                                   BDEUSCMPQ, BDEUSCSAQ, BDEUSCFHQ, # DG ECFIN
-                                  
-                                   BDUN_TOTQ, BDESUNEMO, BDESUNUPQ, # UNP rates
-                                  
-                                   BDUUCG05P, # Short time workers
-                                  
-                                   eonia, is1mo, is3mo, BDWU0913, BDWU0915, BDWU8612, # Interest rates and yields
-                                   USTRCN3., USTRCN5., USTRCN10, BDWU0022, BDWU0004R
-                                   )), funs(log))
-
-
-# Diff for stationarity
-dlndata2  = data.frame(sapply(lndata2, FUN = diff))
-
-
-# # Assign descriptive column names
-# varlist = read.csv("de_varlist.csv")
-# varnames = varlist[2]
-# 
-# colnames(dlndata) = varnames[[1]]
-
+# Build dataset for factor analysis
 
 # Inquire position of the first and last row which contains no empty cells in array
 ta.index = first(which( rowSums(is.na(data2)) == 0 ))
@@ -182,30 +118,70 @@ ta = dates[ta.index]
 te = dates[te.index]
 
 
+# Apply transformations as in GS
+dlndata2 = data2 %>%
+  
+  slice(ta.index:te.index) %>%
+  
+  mutate_at(vars(-c(BDIFDCTNQ, BDIFOBUSQ, BDIFOMTAQ, BDIFORTAQ, BDIFOBDOQ, BDIFOWHAQ, # Ifo Business Conditions
+                    BDIFDCTIQ, BDIFDCBIQ, BDIFDCPIQ, BDIFDCCIQ, BDIFDCDIQ, BDIFDCEIQ, # Ifo Construction
+                    BDIFDMTFQ, BDIFDMCFQ, BDIFDMPFQ, BDIFDMIFQ, BDIFDMDFQ, BDIFDMNFQ, # Ifo Consumption
+                    BDIFDMTCQ, BDIFDMCCQ, BDIFDMPCQ, BDIFDMICQ, BDIFDMDCQ, BDIFDMNCQ, 
+                    BDIFDFBCQ, BDIFRS.CQ, BDIFWS.CQ, 
+                    BDEUSCMPQ, BDEUSCSAQ, BDEUSCFHQ, # DG ECFIN
+                    
+                    BDUN_TOTQ, BDESUNEMO, BDESUNUPQ, # UNP rates
+                    
+                    BDUUCG05P, # Short time workers
+                    
+                    eonia, is1mo, is3mo, BDWU0913, BDWU0915, BDWU8612, # Interest rates and yields
+                    USTRCN3., USTRCN5., USTRCN10, BDWU0022, BDWU0004R
+  )), funs(log)) %>%
+  
+  mutate_at(vars(-c(BDIFDCTNQ, BDIFOBUSQ, BDIFOMTAQ, BDIFORTAQ, BDIFOBDOQ, BDIFOWHAQ, # Ifo Business Conditions
+                    BDIFDMCCQ, BDIFDMPCQ, BDIFDMICQ, BDIFDMDCQ, BDIFDMNCQ, BDIFDFBCQ, BDIFRS.CQ, BDIFWS.CQ, # Ifo Inventories
+                    
+                    BDUUCG05P, # Short time workers
+                    
+                    USTRCN3., USTRCN5., USTRCN10, BDWU0022 # Bond Yield Spreads
+                    )), funs(. - lag(.)))
+
+
+
+
+
+
+# # Assign descriptive column names
+# varlist = read.csv("de_varlist.csv")
+# varnames = varlist[2]
+# 
+# colnames(dlndata) = varnames[[1]]
+
+
+
+
 
 # Save data to workspace
-save(dates, data2, lndata2, dlndata2, file = "de_gsdata.RData")
+save(dates, data2, dlndata2, file = "de_gsdata.RData")
 
 
-# # Save data and varnames to csv
-# out.dsrequest = colnames(datastream)
-# out.varcodes  = colnames(data)
-# out.varnames  = colnames(dlndata)
-# out.dates     = dates[ta.index:te.index]
-# 
-# out.data      = data[ta.index:te.index, ] # level data
-out.dlndata2   = dlndata2[ta.index:te.index-1, ] # diffed series are one observation shorter
-# 
-# out.surveys   = surveys[ta.index:te.index, ] # surveys still contain NA elements!
-# out.dsurveys  = dsurveys[ta.index:te.index-1, ]
-# 
-# # Write .csv
-# write.table(out.dates, file = 'de_dates.csv', row.names = FALSE, col.names = FALSE, sep = ',')
-# write.table(out.dsrequest, file = 'de_request.csv', row.names = FALSE, col.names = FALSE, sep = ',')
-# write.table(out.varnames, file = 'de_varnames.csv', row.names = FALSE, col.names = FALSE, sep = ',')
+# Save data and varnames to csv
+#out.dsrequest = colnames(datastream_gs)
+#out.varcodes  = colnames(data2)
+out.varnames  = colnames(dlndata2)
+out.dates     = dates[(ta.index+1):te.index]
+
+#out.data      = data2[ta.index:te.index] # level data
+out.dlndata2  = dlndata2[(ta.index+1):te.index, ] # diffed series are one observation shorter
+
+# Write .csv
+
+write.table(out.dates, file = 'de_gsdates.csv', row.names = FALSE, col.names = FALSE, sep = ',')
+#write.table(out.dsrequest, file = 'de_request.csv', row.names = FALSE, col.names = FALSE, sep = ',')
+write.table(out.varnames, file = 'de_gsvarnames.csv', row.names = FALSE, col.names = FALSE, sep = ',')
 # 
 # write.table(out.data, file = 'de_data.csv', row.names = FALSE, col.names = FALSE, sep = ',')
- write.table(out.dlndata2, file = 'de_gsdata.csv', row.names = FALSE, col.names = FALSE, sep = ',')
+write.table(out.dlndata2, file = 'de_gsdata.csv', row.names = FALSE, col.names = FALSE, sep = ',')
 # 
 # write.table(out.surveys, file = 'de_surveys.csv', row.names = FALSE, col.names = FALSE, sep = ',')
 # write.table(out.dsurveys, file = 'de_surveys2.csv', row.names = FALSE, col.names = FALSE, sep = ',')

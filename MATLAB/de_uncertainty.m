@@ -3,15 +3,16 @@
 % -------------------------------------------------------------------------
 
 %clear; clc;
+%addpath('..\R;..\MATLAB')
 
 % Load data
-load de_factors_forc;
+load gs_factors_forc;
 
-sf = csvread('de_svflatent.csv', 1); % Estimates of latent process s(t)
-tf = csvread('de_svfparams.csv', 1); % AR(1) parameter estimators
+sf = csvread('gs_svflatent.csv', 1); % Estimates of latent process s(t)
+tf = csvread('gs_svfparams.csv', 1); % AR(1) parameter estimators
 
-sy = csvread('de_svylatent.csv', 1);
-ty = csvread('de_svyparams.csv', 1);
+sy = csvread('gs_svylatent.csv', 1);
+ty = csvread('gs_svyparams.csv', 1);
 
 
 
@@ -161,4 +162,4 @@ end
 %%%%
 % Save results
 
-save de_uncertainty dates Uavg Ufac ut phisav
+save gs_uncertainty dates Uavg Ufac ut phisav

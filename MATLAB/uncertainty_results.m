@@ -9,6 +9,7 @@ load jlnresults % aggu
 load uncertainty
 
 load de_uncertainty
+load gs_uncertainty
 
 
 
@@ -30,18 +31,24 @@ utcsa1 = squeeze(mean(jlnut,2));
 figure
 subplot(2,1,1);
 for i = [1, 3, 12]
-    plot(dates, Uavg(:, i))
+    plot(dates, Uavg(:, i), 'DisplayName', ['h = ',num2str(i)])
     hold on
 end
 legend('show')
+title('Uavg')
 
 subplot(2,1,2);
 for i = [1, 3, 12]
-    plot(dates, Ufac(:, i))
+    plot(dates, Ufac(:, i), 'DisplayName', ['h = ',num2str(i)])
     hold on
 end
 legend('show')
+title('Ufac')
 
+% Print to pdf
+%print('gs_uncertainty_plot', '-dpdf', '-bestfit')
+% Print to .eps
+%print('gs_uncertainty_plot', '-depsc')
 
 
 
@@ -86,7 +93,7 @@ end
 
 
 % Does it hold that U is larger for larger h?
-tselect = 600;
+tselect = 250;
 vselect = 1:9;
 
 figure

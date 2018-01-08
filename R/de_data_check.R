@@ -25,6 +25,29 @@ test1 = is.na(dlndata)
 rowSums(test1) # Count cases
 
 
+#### Compare PW and GS
+# Which series are in both datesets?
+var1 = colnames(data)
+var2 = colnames(data2)
+
+test2 = cbind(c(var1, var2))
+
+test1 = matrix(NA,100,105)
+
+for(i in 1:100){
+  
+  for(j in 1:105){
+    
+    test1[i,j] = var1[i] == var2[j]
+  }
+}
+
+sum(test1)
+
+tindex = which(test1, arr.ind = TRUE)
+
+# There are 8 series which are in both data sets. Merging should result in a 323x197 df
+data3 = merge(data, data2)
 
 
 # Restrict sample to 1991Q1-2016Q4
@@ -54,15 +77,15 @@ par(mfrow = c(1,1))
 
 
 # Plot logdiffs
-path = file.path(getwd(), paste("de_data2_plot.pdf"))
+path = file.path(getwd(), paste("de_gsdata2_plot.pdf"))
 pdf(file = path)
 
 par(mfrow = c(3,2))
 
 for(i in 1:de.N){
   
-  plot(dlndata[[i]], type = "l", col = "blue", xlab = "Time", ylab = "Variable",
-       main = colnames(data[i]), lwd = 2)
+  plot(dlndata2[[i]], type = "l", col = "blue", xlab = "Time", ylab = "Variable",
+       main = colnames(dlndata2[i]), lwd = 2)
   #lines(n, Y2, col = "green", lwd = 2)
   #legend("topright", legend = c("T_n", "T'_n"), fill = c("blue", "green"))
   #box()
