@@ -1,6 +1,10 @@
 ################
 # General
 
+# Data Storage
+*.csv
+*.h5
+
 # Output
 *.pdf
 *.eps
@@ -13,7 +17,6 @@
 
 # Data storage
 *.mat
-*.csv
 
 # Output files
 *.out
