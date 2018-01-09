@@ -10,6 +10,12 @@
 %clear; clc;
 %addpath('..\R;..\MATLAB')
 
+
+% x = h5read('gs_data.h5', '/dlndata');
+% varnames = h5read('gs_data.h5'); %ATTRIBUTE?!?
+% dates =  h5read('gs_data.h5'); %ATTRIBUTE?!?
+
+
 gsdata   = table2array(readtable('gs_data.csv', 'ReadVariableNames', false));
 varnames = table2array(readtable('gs_varnames.csv', 'ReadVariableNames', false));
 dates    = datetime(table2array(readtable('gs_dates.csv', 'ReadVariableNames', false)));

@@ -8,13 +8,13 @@
 % Load data
 load gs_factors_forc;
 
-sf = csvread('gs_svflatent.csv', 1); % Estimates of latent process s(t)
-tf = csvread('gs_svfparams.csv', 1); % AR(1) parameter estimators
+%h5disp('gs_svfresults.h5')
+sf = h5read('gs_svfresults.h5', '/h')'; % Estimates of latent process s(t)
+tf = h5read('gs_svfresults.h5', '/t')'; % AR(1) parameter estimators
 
-sy = csvread('gs_svylatent.csv', 1);
-ty = csvread('gs_svyparams.csv', 1);
-
-
+%h5disp('gs_svyresults.h5')
+sy = h5read('gs_svyresults.h5', '/h')';
+ty = h5read('gs_svyresults.h5', '/t')';
 
 
 %%%%

@@ -21,6 +21,7 @@ location.matlab = normalizePath(file.path("..", "MATLAB"), winslash = "/")
 
 
 # Initialization
+require(h5) # Output to HDF5
 require(stochvol)
 options(digits = 17)
 set.seed(840) # for replication
@@ -67,6 +68,14 @@ for (i in 1:obs.N){
 
 
 # Save results to .csv in format [estimators, variables]
-write.csv(h, file = 'gs_svflatent.csv', row.names = FALSE)
-write.csv(t, file = 'gs_svfparams.csv', row.names = FALSE)
-write.csv(g, file = 'gs_svfgeweke.csv', row.names = FALSE)
+# write.csv(h, file = 'gs_svflatent.csv', row.names = FALSE)
+# write.csv(t, file = 'gs_svfparams.csv', row.names = FALSE)
+# write.csv(g, file = 'gs_svfgeweke.csv', row.names = FALSE)
+
+
+# Save results to HDF5
+out.file = h5file("gs_svfresults.h5", mode = "w")
+out.file["/h"] = h
+out.file["/t"] = t
+out.file["/g"] = g
+h5close(out.file)

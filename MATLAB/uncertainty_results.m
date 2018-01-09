@@ -48,7 +48,7 @@ title('Ufac')
 % Print to pdf
 %print('gs_uncertainty_plot', '-dpdf', '-bestfit')
 % Print to .eps
-%print('gs_uncertainty_plot', '-depsc')
+%print('gs_ufac_plot', '-depsc')
 
 
 
