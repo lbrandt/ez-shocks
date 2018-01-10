@@ -4,6 +4,7 @@
 
 require(tidyverse)
 require(readxl)
+require(h5)
 
 # Set working directory to script file location
 
@@ -83,8 +84,6 @@ data2$is1mo = fun.chain(data2$BDSU0310R, data2$BDSU0104, 0, 0)
 data2$is3mo = fun.chain(data2$BDSU0316R, data2$BDSU0107, 0, 0)
 
 
-View(colnames(data2))
-
 # Remove unnecessary or discontinued series from data
 data2 = data2 %>%
   
@@ -158,21 +157,25 @@ dlndata2 = data2 %>%
 # colnames(dlndata) = varnames[[1]]
 
 
-
-
-
 # Save data to workspace
-save(dates, data2, dlndata2, file = "de_gsdata.RData")
+save(dates, data2, dlndata2, file = "gs_data.RData")
 
 
-# Save data and varnames to csv
-#out.dsrequest = colnames(datastream_gs)
-#out.varcodes  = colnames(data2)
+# Prepare data for export
 out.varnames  = colnames(dlndata2)
-out.dates     = dates[(ta.index+1):te.index]
+out.dates     = as.character.Date(dates[ta.index:te.index])
+out.data      = as.matrix(data2[ta.index:te.index, ]) # level data
+out.dlndata   = as.matrix(dlndata2[(ta.index+1):te.index, ]) # diffed series are one observation shorter
 
-#out.data      = data2[ta.index:te.index] # level data
-out.dlndata2  = dlndata2[(ta.index+1):te.index, ] # diffed series are one observation shorter
+
+# Save results to HDF5
+out.file = h5file("gs_data.h5", mode = "w")
+out.file["/varnames"] = out.varnames
+out.file["/dates"] = out.dates
+out.file["/data"] = out.data
+out.file["/dlndata"] = out.dlndata
+h5close(out.file)
+
 
 # Write .csv
 
@@ -185,6 +188,8 @@ write.table(out.dlndata2, file = 'de_gsdata.csv', row.names = FALSE, col.names =
 # 
 # write.table(out.surveys, file = 'de_surveys.csv', row.names = FALSE, col.names = FALSE, sep = ',')
 # write.table(out.dsurveys, file = 'de_surveys2.csv', row.names = FALSE, col.names = FALSE, sep = ',')
+
+
 
 
 

@@ -11,13 +11,16 @@
 %addpath('..\R;..\MATLAB')
 
 
-% x = h5read('gs_data.h5', '/dlndata');
-% varnames = h5read('gs_data.h5'); %ATTRIBUTE?!?
-% dates =  h5read('gs_data.h5'); %ATTRIBUTE?!?
+%h5disp('gs_data.h5')
+test = h5read('gs_data.h5', '/data')';
+varnames = h5read('gs_data.h5', '/varnames');
+dates    = h5read('gs_data.h5', '/dates');
+x        = h5read('gs_data.h5', '/dlndata')';
 
+isequal(gsdata, x)
 
 gsdata   = table2array(readtable('gs_data.csv', 'ReadVariableNames', false));
-varnames = table2array(readtable('gs_varnames.csv', 'ReadVariableNames', false));
+varnames2 = table2array(readtable('gs_varnames.csv', 'ReadVariableNames', false));
 dates    = datetime(table2array(readtable('gs_dates.csv', 'ReadVariableNames', false)));
 
 [T, N]   = size(gsdata);
