@@ -10,7 +10,7 @@ clear; clc;
 
 % Load and manipulate data in import_data. Call script here:
 load gs_data
-x = gsdata;
+
 
 %%%%
 % Find optimal number of factors according to Bai & Ng (2002)
@@ -104,7 +104,9 @@ end
 maxlag = max([py, pz, pf]); % Maximum lag length out of all regressions run in file
 dates = dates(1+maxlag:end);
 
-save gs_factors_forc dates yfit ffit ybetas fbetas vyt vft varnames py pz pf zt x ymodels
+save gs_factors_forc -v7.3 dates yfit ffit ybetas fbetas vyt vft varnames py pz pf zt x ymodels
+
+
 
 % Also write to .txt file for R code
 %dlmwrite('factors_vyt.txt',vyt,'delimiter','\t','precision',17);
@@ -122,10 +124,10 @@ vytable = [datetable, vytable];
 writetable(vytable, 'gs_factors_vyt.csv');
 
 
-% vft factor AR(4) prediction errors
-fstring = string(repmat('Factor', R, 1));
-fnames = strcat(fstring, string((1:R)'));
-fnames = cellstr(fnames);
+% Generate Factor names
+% fstring = string(repmat('Factor', R, 1));
+% fnames = strcat(fstring, string((1:R)'));
+% fnames = cellstr(fnames);
 
 vftable = array2table(vft, 'VariableNames', fnames);
 vftable = [datetable, vftable];

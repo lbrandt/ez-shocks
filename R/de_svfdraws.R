@@ -11,12 +11,12 @@
 location.thisfile = dirname(rstudioapi::getActiveDocumentContext()$path)
 # Retrieve script location if file is called via source()
 location.thisfile = dirname(sys.frame(1)$ofile)
-
-# Setting working directory to file location
+# Set working directory to file location
 setwd(location.thisfile)
 
 # Set location of MATLAB files relative to working directory which contains this script
 location.matlab = normalizePath(file.path("..", "MATLAB"), winslash = "/")
+
 
 
 
@@ -26,11 +26,12 @@ require(stochvol)
 options(digits = 17)
 set.seed(840) # for replication
 
-# KE file
-vt = read.csv(header = TRUE, sep = ",", file.path(location.matlab, "gs_factors_vft.csv"))
 
-# Remove dates vector
-vt = vt[, -1]
+# MATLAB file
+in.file = h5file(file.path(location.matlab, "gs_factors_forc.mat"))
+vt = t(in.file["vft"][])
+h5close(in.file)
+
 
 obs.T    = dim(vt)[1]
 obs.N    = dim(vt)[2]

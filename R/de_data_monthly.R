@@ -87,6 +87,8 @@ data2$is3mo = fun.chain(data2$BDSU0316R, data2$BDSU0107, 0, 0)
 # Remove unnecessary or discontinued series from data
 data2 = data2 %>%
   
+  select(-c(BDTOTEMPP, BDWAGES.F, BDWAGMANF, BDCPCF..F)) %>% # Seasonal
+  
   select(-c(BDUSMC01B, BDUSMC08B, BDUSMC11B, BDEMPMFTP)) %>% # New labour market data
   select(-c(BDUSMB01B, BDUSMB08B, BDUSMB11B, BDEMPMF.P)) %>% # Discontinued labour market data
   
@@ -95,7 +97,6 @@ data2 = data2 %>%
   
   select(-c(WDCPBPWWG, WDCPBTBWG)) %>% # New world trade indices
   select(-c(WDCPBPW5G, WDCPBTB5G)) %>% # Discontinued world trade indices
-  
   
   select(-c(BDES7IVPG, BDES77FBG)) %>% # Building permits
   select(-c(BDI..NELF, BDI..RELF)) %>% # Alternative FX computation
@@ -148,8 +149,6 @@ dlndata2 = data2 %>%
 
 
 
-
-
 # # Assign descriptive column names
 # varlist = read.csv("de_varlist.csv")
 # varnames = varlist[2]
@@ -178,19 +177,6 @@ h5close(out.file)
 
 
 # Write .csv
-
-write.table(out.dates, file = 'de_gsdates.csv', row.names = FALSE, col.names = FALSE, sep = ',')
-#write.table(out.dsrequest, file = 'de_request.csv', row.names = FALSE, col.names = FALSE, sep = ',')
-write.table(out.varnames, file = 'de_gsvarnames.csv', row.names = FALSE, col.names = FALSE, sep = ',')
-# 
-# write.table(out.data, file = 'de_data.csv', row.names = FALSE, col.names = FALSE, sep = ',')
-write.table(out.dlndata2, file = 'de_gsdata.csv', row.names = FALSE, col.names = FALSE, sep = ',')
-# 
-# write.table(out.surveys, file = 'de_surveys.csv', row.names = FALSE, col.names = FALSE, sep = ',')
-# write.table(out.dsurveys, file = 'de_surveys2.csv', row.names = FALSE, col.names = FALSE, sep = ',')
-
-
-
 
 
 

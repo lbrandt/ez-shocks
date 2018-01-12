@@ -12,18 +12,11 @@
 
 
 %h5disp('gs_data.h5')
-test = h5read('gs_data.h5', '/data')';
 varnames = h5read('gs_data.h5', '/varnames');
-dates    = h5read('gs_data.h5', '/dates');
+dates    = datetime(h5read('gs_data.h5', '/dates'));
 x        = h5read('gs_data.h5', '/dlndata')';
 
-isequal(gsdata, x)
-
-gsdata   = table2array(readtable('gs_data.csv', 'ReadVariableNames', false));
-varnames2 = table2array(readtable('gs_varnames.csv', 'ReadVariableNames', false));
-dates    = datetime(table2array(readtable('gs_dates.csv', 'ReadVariableNames', false)));
-
-[T, N]   = size(gsdata);
+[T, N]   = size(x);
 
 fprintf('Monthly series from %s to %s \n', datestr(dates(1)), datestr(dates(end)));
 fprintf('Sample: T = %d, N = %d \n', T, N);
@@ -44,7 +37,7 @@ varnames = strrep(varnames, '(', '');
 varnames = strrep(varnames, ')', '');
 varnames = strrep(varnames, '’', '');
 
-save gs_data varnames dates gsdata
+save gs_data varnames dates x
 
 
 
