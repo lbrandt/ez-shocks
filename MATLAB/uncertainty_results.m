@@ -11,8 +11,8 @@ load uncertainty
 load de_uncertainty
 load gs_uncertainty
 
-
-
+which
+plot(Uind)
 
 utcsa1 = squeeze(mean(jlnut,2));
 %isequal(utcsa, utcsa1) % Why different? utcsa should be "correct" though.
@@ -24,7 +24,6 @@ utcsa1 = squeeze(mean(jlnut,2));
 %usdesc2 = summarize(Ufac);
 
 %array2table([jlndesc, usdesc1, usdesc2], 'VariableNames', {'N', 'mean', 'sd', 'min', 'max'});
-
 
 %%%%
 % Diagram from JLN 2015
@@ -91,7 +90,7 @@ for i = 1:hselect
     title(['h = ',num2str(i)])
 end
 
-
+summarize(Uavg)
 % Does it hold that U is larger for larger h?
 tselect = 250;
 vselect = 1:9;

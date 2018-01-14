@@ -16,8 +16,8 @@ load("pw_data_final.RData")
 #save(pw_data_final, file = "pw_data_final.RData")
 
 
-de.T = dim(data2)[1]
-de.N = dim(data2)[2] 
+de.T = dim(dlndata)[1]
+de.N = dim(dlndata)[2] 
 
 
 # Check if rows/columns contain observations that fulfil some condition
@@ -77,15 +77,15 @@ par(mfrow = c(1,1))
 
 
 # Plot logdiffs
-path = file.path(getwd(), paste("de_gsdata2_plot.pdf"))
+path = file.path(getwd(), paste("de_dlndata_plot.pdf"))
 pdf(file = path)
 
 par(mfrow = c(3,2))
 
 for(i in 1:de.N){
   
-  plot(dlndata2[[i]], type = "l", col = "blue", xlab = "Time", ylab = "Variable",
-       main = colnames(dlndata2[i]), lwd = 2)
+  plot(dlndata[[i]], type = "l", col = "blue", xlab = "Time", ylab = "Variable",
+       main = colnames(dlndata[i]), lwd = 2)
   #lines(n, Y2, col = "green", lwd = 2)
   #legend("topright", legend = c("T_n", "T'_n"), fill = c("blue", "green"))
   #box()

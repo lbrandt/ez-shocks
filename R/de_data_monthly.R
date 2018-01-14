@@ -27,34 +27,15 @@ location.data = normalizePath(file.path("..", "..", "..", "Data"), winslash = "/
 datastream_de = read_excel(file.path(location.data, "DATASTREAM_REQUEST_MONTHLY.xls"), 
                            sheet = "de", col_names = TRUE, na = "NA", skip = 1)
 
-datastream_gs = read_excel(file.path(location.data, "DATASTREAM_REQUEST_MONTHLY.xls"), 
-                           sheet = "de2", col_names = TRUE, na = "NA", skip = 1)
-
-
-# datastream_de = read_excel("C:/Dateien/My Dropbox/Lennart/Thesis/Data/DATASTREAM_REQUEST_MONTHLY.xls", 
-#                           sheet = "de", col_names = TRUE, na = "NA", skip = 1)
-# 
-# datastream_gs = read_excel("C:/Dateien/My Dropbox/Lennart/Thesis/Data/DATASTREAM_REQUEST_MONTHLY.xls", 
-#                           sheet = "de2", col_names = TRUE, na = "NA", skip = 1)
-
 
 # Extract dates
-dates = datastream_gs[[1]]
+dates = datastream_de[[1]]
 ta = first(dates)
 te = last(dates)
 
 
-# Clean data and transform data
-data = datastream_de %>%
-  
-  # Replace R operator % in variable names
-  rename(WGUN_TOTQ = "WGUN%TOTQ") %>%
-  
-  select(-starts_with("X__")) %>% # Remove empty columns
-  select(-starts_with("Code")) # Remove date columns
-
-  
-data2 = datastream_gs %>%
+# Preliminary cleanup
+de_data = datastream_de %>%
   
   # Replace R operator % in variable names
   rename(BDUN_TOTQ = "BDUN%TOTQ") %>%
@@ -63,31 +44,34 @@ data2 = datastream_gs %>%
   select(-starts_with("Code")) # Remove date columns
 
 
-
-
-# Extending time series via growth rates of related variables
+# Chain linking
 source("fun.chain.R")
 
 # Chain link labour market data
-data2$constrempl = fun.chain(data2$BDUSMC01B, data2$BDUSMB01B, 0, 0)
-data2$constrwage = fun.chain(data2$BDUSMC08B, data2$BDUSMB08B, 0, 0)
-data2$constrhour = fun.chain(data2$BDUSMC11B, data2$BDUSMB11B, 0, 0)
-data2$unemplmanu = fun.chain(data2$BDEMPMFTP, data2$BDEMPMF.P, 0, 0)
+de_data$constrempl = fun.chain(de_data$BDUSMC01B, de_data$BDUSMB01B, 0, 0)
+de_data$constrwage = fun.chain(de_data$BDUSMC08B, de_data$BDUSMB08B, 0, 0)
+de_data$constrhour = fun.chain(de_data$BDUSMC11B, de_data$BDUSMB11B, 0, 0)
+de_data$unemplmanu = fun.chain(de_data$BDEMPMFTP, de_data$BDEMPMF.P, 0, 0)
 
 # Chain link world trade indices
-data2$wtradeprod = fun.chain(data2$WDCPBPWWG, data2$WDCPBPW5G, 0, 0)
-data2$wtradebala = fun.chain(data2$WDCPBTBWG, data2$WDCPBTB5G, 0, 0)
+de_data$wtradeprod = fun.chain(de_data$WDCPBPWWG, de_data$WDCPBPW5G, 0, 0)
+de_data$wtradebala = fun.chain(de_data$WDCPBTBWG, de_data$WDCPBTB5G, 0, 0)
 
 # Chain link short term interest rates with corresponding German rates
-data2$eonia = fun.chain(data2$BDSU0304R, data2$BDSU0101, 0, 0)
-data2$is1mo = fun.chain(data2$BDSU0310R, data2$BDSU0104, 0, 0)
-data2$is3mo = fun.chain(data2$BDSU0316R, data2$BDSU0107, 0, 0)
+de_data$eonia = fun.chain(de_data$BDSU0304R, de_data$BDSU0101, 0, 0)
+de_data$is1mo = fun.chain(de_data$BDSU0310R, de_data$BDSU0104, 0, 0)
+de_data$is3mo = fun.chain(de_data$BDSU0316R, de_data$BDSU0107, 0, 0)
+
+# Chain link Turnover in construction
+de_data$toconstind = fun.chain(de_data$BDUSMC31B, de_data$BDUSMB31B, 0, 0)
+de_data$toconstres = fun.chain(de_data$BDUSMC36B, de_data$BDUSMB36B, 0, 0)
+de_data$toconstpub = fun.chain(de_data$BDUSMC37B, de_data$BDUSMB37B, 0, 0)
+
+
 
 
 # Remove unnecessary or discontinued series from data
-data2 = data2 %>%
-  
-  select(-c(BDTOTEMPP, BDWAGES.F, BDWAGMANF, BDCPCF..F)) %>% # Seasonal
+de_data = de_data %>%
   
   select(-c(BDUSMC01B, BDUSMC08B, BDUSMC11B, BDEMPMFTP)) %>% # New labour market data
   select(-c(BDUSMB01B, BDUSMB08B, BDUSMB11B, BDEMPMF.P)) %>% # Discontinued labour market data
@@ -98,28 +82,24 @@ data2 = data2 %>%
   select(-c(WDCPBPWWG, WDCPBTBWG)) %>% # New world trade indices
   select(-c(WDCPBPW5G, WDCPBTB5G)) %>% # Discontinued world trade indices
   
-  select(-c(BDES7IVPG, BDES77FBG)) %>% # Building permits
-  select(-c(BDI..NELF, BDI..RELF)) %>% # Alternative FX computation
-  select(-c(BDESPPIEF, BDESPPITF, BDESPPIDF, BDESPPINF, BDCPSERVF)) # Prices
-
-
-
-#### Add more finance from pw data
+  select(-c(BDUSMC36B, BDUSMC31B, BDUSMC37B)) %>% # New turnover in construction
+  select(-c(BDUSMB36B, BDUSMB31B, BDUSMB37B))  # Discontinued turnover in construction
+  
 
 
 # Build dataset for factor analysis
 
 # Inquire position of the first and last row which contains no empty cells in array
-ta.index = first(which( rowSums(is.na(data2)) == 0 ))
-te.index = last(which( rowSums(is.na(data2)) == 0 ))
+ta.index = first(which( rowSums(is.na(de_data)) == 0 ))
+te.index = last(which( rowSums(is.na(de_data)) == 0 ))
 
 # Construct time range of largest complete dataset
 ta = dates[ta.index]
 te = dates[te.index]
 
 
-# Apply transformations as in GS
-dlndata2 = data2 %>%
+# Apply transformations for stationarity
+dlndata = de_data %>%
   
   slice(ta.index:te.index) %>%
   
@@ -129,13 +109,45 @@ dlndata2 = data2 %>%
                     BDIFDMTCQ, BDIFDMCCQ, BDIFDMPCQ, BDIFDMICQ, BDIFDMDCQ, BDIFDMNCQ, 
                     BDIFDFBCQ, BDIFRS.CQ, BDIFWS.CQ, 
                     BDEUSCMPQ, BDEUSCSAQ, BDEUSCFHQ, # DG ECFIN
+                    BDIFDMNAQ, BDIFDRSAQ, BDIFDMPAQ, BDIFDMCAQ,
                     
                     BDUN_TOTQ, BDESUNEMO, BDESUNUPQ, # UNP rates
                     
                     BDUUCG05P, # Short time workers
                     
-                    eonia, is1mo, is3mo, BDWU0913, BDWU0915, BDWU8612, # Interest rates and yields
-                    USTRCN3., USTRCN5., USTRCN10, BDWU0022, BDWU0004R
+                    eonia, is1mo, is3mo, BDWU0913, BDWU0915, BDWU8612, USTRCN3., USTRCN5., USTRCN10, # Interest rates and yields
+                    BDWU0022,  BDWU0004R,  BDWU0898, BDWU0899, BDWU0900, BDWU0901, BDWU0902, BDWU0903,
+                    BDWU8606, BDWU8607, BDWU8608, BDWU001AA, BDIFDMNAQ, BDWU3141A, BDWU035AA)),
+            funs(log)) %>%
+  
+  mutate_at(vars(-c(BDIFDMPCQ, BDIFDMICQ, BDIFDMDCQ, BDIFDMNCQ, BDIFDFBCQ, BDIFRS.CQ, BDIFWS.CQ, # Ifo Inventories
+                    
+                    BDUUCG05P)), # Short time workers
+            funs(. - lag(.)))
+
+
+
+
+# Apply transformations as in GS
+dlndata2 = de_data %>%
+  
+  slice(ta.index:te.index) %>%
+  
+  mutate_at(vars(-c(BDIFDCTNQ, BDIFOBUSQ, BDIFOMTAQ, BDIFORTAQ, BDIFOBDOQ, BDIFOWHAQ, # Ifo Business Conditions
+                    BDIFDCTIQ, BDIFDCBIQ, BDIFDCPIQ, BDIFDCCIQ, BDIFDCDIQ, BDIFDCEIQ, # Ifo Construction
+                    BDIFDMTFQ, BDIFDMCFQ, BDIFDMPFQ, BDIFDMIFQ, BDIFDMDFQ, BDIFDMNFQ, # Ifo Consumption
+                    BDIFDMTCQ, BDIFDMCCQ, BDIFDMPCQ, BDIFDMICQ, BDIFDMDCQ, BDIFDMNCQ, 
+                    BDIFDFBCQ, BDIFRS.CQ, BDIFWS.CQ, 
+                    BDEUSCMPQ, BDEUSCSAQ, BDEUSCFHQ, # DG ECFIN
+                    BDIFDMNAQ, BDIFDRSAQ, BDIFDMPAQ, BDIFDMCAQ,
+                    
+                    BDUN_TOTQ, BDESUNEMO, BDESUNUPQ, # UNP rates
+                    
+                    BDUUCG05P, # Short time workers
+                    
+                    eonia, is1mo, is3mo, BDWU0913, BDWU0915, BDWU8612, USTRCN3., USTRCN5., USTRCN10, # Interest rates and yields
+                    BDWU0022,  BDWU0004R,  BDWU0898, BDWU0899, BDWU0900, BDWU0901, BDWU0902, BDWU0903,
+                    BDWU8606, BDWU8607, BDWU8608, BDWU001AA, BDIFDMNAQ, BDWU3141A, BDWU035AA
   )), funs(log)) %>%
   
   mutate_at(vars(-c(BDIFDCTNQ, BDIFOBUSQ, BDIFOMTAQ, BDIFORTAQ, BDIFOBDOQ, BDIFOWHAQ, # Ifo Business Conditions
@@ -144,31 +156,24 @@ dlndata2 = data2 %>%
                     BDUUCG05P, # Short time workers
                     
                     USTRCN3., USTRCN5., USTRCN10, BDWU0022 # Bond Yield Spreads
-                    )), funs(. - lag(.)))
+  )), funs(. - lag(.)))
 
 
-
-
-# # Assign descriptive column names
-# varlist = read.csv("de_varlist.csv")
-# varnames = varlist[2]
-# 
-# colnames(dlndata) = varnames[[1]]
 
 
 # Save data to workspace
-save(dates, data2, dlndata2, file = "gs_data.RData")
+save(dates, de_data, dlndata, file = "de_data.RData")
 
 
 # Prepare data for export
-out.varnames  = colnames(dlndata2)
+out.varnames  = colnames(dlndata)
 out.dates     = as.character.Date(dates[ta.index:te.index])
-out.data      = as.matrix(data2[ta.index:te.index, ]) # level data
-out.dlndata   = as.matrix(dlndata2[(ta.index+1):te.index, ]) # diffed series are one observation shorter
+out.data      = as.matrix(de_data[ta.index:te.index, ]) # level data
+out.dlndata   = as.matrix(dlndata[(ta.index+1):te.index, ]) # diffed series are one observation shorter
 
 
 # Save results to HDF5
-out.file = h5file("gs_data.h5", mode = "w")
+out.file = h5file("de_data.h5", mode = "w")
 out.file["/varnames"] = out.varnames
 out.file["/dates"] = out.dates
 out.file["/data"] = out.data

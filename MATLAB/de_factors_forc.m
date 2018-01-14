@@ -9,7 +9,8 @@
 clear; clc;
 
 % Load and manipulate data in import_data. Call script here:
-load gs_data
+load de_data
+%load gs_data
 
 
 %%%%
@@ -26,6 +27,11 @@ end
 bnicmin = min(bnicv);
 rhat = minind(bnicv); % Optimal number of factors according to lowest IC
 fprintf('\nFactors via IC(%d): rhat = %d \n', gnum, rhat);
+
+
+%%%% Override BNIC
+rhat = 12
+%%%%
 
 
 %%%%
@@ -104,8 +110,8 @@ end
 maxlag = max([py, pz, pf]); % Maximum lag length out of all regressions run in file
 dates = dates(1+maxlag:end);
 
-save gs_factors_forc -v7.3 dates yfit ffit ybetas fbetas vyt vft varnames py pz pf zt x ymodels
-
+save de_factors_forc -v7.3 dates yfit ffit ybetas fbetas vyt vft varnames py pz pf zt x ymodels
+%save gs_factors_forc -v7.3 dates yfit ffit ybetas fbetas vyt vft varnames py pz pf zt x ymodels
 
 
 % Also write to .txt file for R code

@@ -12,9 +12,9 @@
 
 
 %h5disp('gs_data.h5')
-varnames = h5read('gs_data.h5', '/varnames');
-dates    = datetime(h5read('gs_data.h5', '/dates'));
-x        = h5read('gs_data.h5', '/dlndata')';
+varnames = h5read('de_data.h5', '/varnames');
+dates    = datetime(h5read('de_data.h5', '/dates'));
+x        = h5read('de_data.h5', '/dlndata')';
 
 [T, N]   = size(x);
 
@@ -37,7 +37,10 @@ varnames = strrep(varnames, '(', '');
 varnames = strrep(varnames, ')', '');
 varnames = strrep(varnames, '’', '');
 
-save gs_data varnames dates x
+% Shorten dates of diffed series
+dates = dates(2:end);
+
+save de_data varnames dates x
 
 
 

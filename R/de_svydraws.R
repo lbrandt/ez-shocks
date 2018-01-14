@@ -28,7 +28,7 @@ set.seed(840) # for replication
 
 
 # MATLAB file
-in.file = h5file(file.path(location.matlab, "gs_factors_forc.mat"))
+in.file = h5file(file.path(location.matlab, "de_factors_forc.mat"))
 vt = t(in.file["vyt"][])
 h5close(in.file)
 
@@ -74,7 +74,7 @@ for (i in 1:obs.N){
 
 
 # Save results to HDF5
-out.file = h5file("gs_svyresults.h5", mode = "w")
+out.file = h5file("de_svyresults.h5", mode = "w")
 out.file["/h"] = h
 out.file["/t"] = t
 out.file["/g"] = g

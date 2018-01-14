@@ -6,15 +6,15 @@
 %addpath('..\R;..\MATLAB')
 
 % Load data
-load gs_factors_forc;
+load de_factors_forc;
 
 %h5disp('gs_svfresults.h5')
-sf = h5read('gs_svfresults.h5', '/h')'; % Estimates of latent process s(t)
-tf = h5read('gs_svfresults.h5', '/t')'; % AR(1) parameter estimators
+sf = h5read('de_svfresults.h5', '/h')'; % Estimates of latent process s(t)
+tf = h5read('de_svfresults.h5', '/t')'; % AR(1) parameter estimators
 
 %h5disp('gs_svyresults.h5')
-sy = h5read('gs_svyresults.h5', '/h')';
-ty = h5read('gs_svyresults.h5', '/t')';
+sy = h5read('de_svyresults.h5', '/h')';
+ty = h5read('de_svyresults.h5', '/t')';
 
 
 %%%%
@@ -161,5 +161,4 @@ end
 
 %%%%
 % Save results
-
-save gs_uncertainty dates Uavg Ufac ut phisav
+save de_uncertainty dates Uavg Ufac ut phisav
