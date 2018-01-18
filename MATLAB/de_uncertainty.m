@@ -161,4 +161,4 @@ end
 
 %%%%
 % Save results
-save de_uncertainty dates Uavg Ufac ut phisav
+save de_uncertainty -v7.3 dates Uavg Ufac ut phisav
