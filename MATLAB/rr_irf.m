@@ -19,8 +19,8 @@ dates = datetime(dates(2:end));
 dum12(month(dates) == 12) = 1; % Monthly Dummies
 
 % Set R&R sample from 1970:1 to 1996:12
-ta = '1970-01-01';
-te = '1996-12-01';
+ta = datetime('1970-01-01');
+te = datetime('1996-12-01');
 taindex = find(dates == ta);
 teindex = find(dates == te);
 
@@ -28,6 +28,18 @@ sample = taindex:teindex;
 
 % Plot shock series RESID
 plot(dates(sample), data(sample, 1))
+
+% % Load constructed series
+% load rr_shocks
+% msample = (find(dates == mdates(1))):(find(dates == mdates(end)));
+% 
+% % Compare to RESID
+% figure
+% plot(mdates, mshocks)
+% hold on
+% plot(mdates, data(msample, strcmp(names, {'RESID'})))
+% % Is same!
+
 
 % Select variables for estimation
 depvar = data(sample, strcmp(names, {'PCIPNSA'}));
