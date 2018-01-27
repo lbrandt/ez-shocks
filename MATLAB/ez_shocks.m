@@ -12,12 +12,12 @@
 [~, dname, ~] = xlsread('ez_announce.xlsx', 'B1:D1');
 [~, ddate, ~] = xlsread('ez_announce.xlsx', 'A:A');
 
-ddate = datetime(ddate(2:end));
+announceDates = datetime(ddate(2:end));
 
 %h5disp('ois_data.h5')
 dates = datetime(h5read('ois_data.h5', '/dates'));
 names = h5read('ois_data.h5', '/varnames');
-data  = h5read('ois_data.h5', '/data')';
+x  = h5read('ois_data.h5', '/data')';
 
 
 % % Wu & Xia (2017)
@@ -25,6 +25,107 @@ data  = h5read('ois_data.h5', '/data')';
 % wxdstr = str2num(strcat(num2str(shadowrate(:, 1)), num2str(15))); %#ok<ST2NM> % Suppress str2double conversion advice
 % wxdate = datetime(wxdstr, 'ConvertFrom', 'yyyymmdd', 'Format', 'MMM yyyy');
 % wxrate = shadowrate(:, 2);
+
+
+
+% Flip ECB announcement series
+ydate = flipud(announceDates);
+
+ta = datetime('1999-01-04');
+te = datetime('2017-12-14');
+taindex = find(ydate == ta);
+teindex = find(ydate == te);
+
+announceFull = taindex:teindex;
+
+dydate = ydate(2) - ydate(1);
+
+y = flipud(ddata);
+% Fill NaN for continuous series
+for i = 1:length(ydate)
+    for j = 1:3
+        if isnan(y(i, j))
+            y(i, j) = y(i-1, j);
+        end
+    end
+end
+
+% Plot ECB monetary policy corridor by meeting
+figure
+for i = 1:3
+    plot(ydate(sample), y(sample, i))
+    hold on
+end
+plot(ydate(sample), (sample*0), 'black') % Add zero line
+hold off
+
+
+% Compute shock series as residual from static regression
+% Select variables for estimation
+dy = diff(y(:, 2));
+dylags = mlag(dy(:), 1);
+
+Y = dy(announceFull);
+X = [ones(length(announceFull), 1), dylags(announceFull), ];
+
+% OLS
+beta = ols(Y, X, 0);
+yhat = X* beta;
+u = Y - yhat;
+
+plot(ydate(announceFull), u)
+
+
+
+% Compute shocks series from dynamic regression
+h = 1;
+window = 100;
+
+regstart = taindex;
+regstop  = regstart + window - 1;
+femax    = teindex - regstop + 1 - h;
+
+ff = zeros(femax, 1);
+fe = zeros(femax, 1);
+fu = zeros(femax, 1);
+fl = zeros(femax, 1);
+
+% Select variables for regression
+Y = dy(announceFull);
+X = [ones(length(announceFull), 1), dylags(announceFull)];
+
+for i = 0:(femax - 2)
+    
+    sample = (regstart + i):(regstop + i); % Rolling window
+    %sample = (regstart):(regstop + i); % Expanding window
+    beta = ols(Y(sample), X(sample, :), 0);
+    
+    forc = X(sample + h, :)* beta;
+    
+    ff(i+1) = forc(end);
+    fe(i+1) = Y(regstop + i + h) - ff(i+1);
+end
+
+
+
+% Matrix of independent variables
+X = data(sample, 5:22);
+
+% Delete NaN rows
+nanindex = any(isnan(X), 2);
+
+X(nanindex, :) = [];
+depvar(nanindex, :) = [];
+
+% OLS
+beta = ols(depvar, X, 1);
+yhat = [ones(length(X), 1), X]* beta;
+
+u = depvar - yhat;
+
+
+
+
 
 
 
