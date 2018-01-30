@@ -1,19 +1,21 @@
 % -------------------------------------------------------------------------
-% Euro OIS
-% Monetary Policy Shocks
+% Monetary Policy Shocks in Eurozone
 % -------------------------------------------------------------------------
 
 %clear; clc;
 %addpath('..\R;..\MATLAB;..\..\..\Data')
 
+% ----------------
 % Load data
-[ddata, ~, ~] = xlsread('ez_announce.xlsx');
 
+% ECB MP announcements
+[ddata, ~, ~] = xlsread('ez_announce.xlsx');
 [~, dname, ~] = xlsread('ez_announce.xlsx', 'B1:D1');
 [~, ddate, ~] = xlsread('ez_announce.xlsx', 'A:A');
 
 announceDates = datetime(ddate(2:end));
 
+% Euro OIS
 %h5disp('ois_data.h5')
 dates = datetime(h5read('ois_data.h5', '/dates'));
 names = h5read('ois_data.h5', '/varnames');
@@ -26,7 +28,20 @@ x  = h5read('ois_data.h5', '/data')';
 % wxdate = datetime(wxdstr, 'ConvertFrom', 'yyyymmdd', 'Format', 'MMM yyyy');
 % wxrate = shadowrate(:, 2);
 
+% ----------------
+% From GJ MP Shocks Database
 
+% Babecka Kucharcukova et al. (2016)
+[babShocks, ~, ~] = xlsread('gj_shocks_m.xlsx', 'bab');
+[~, bdates, ~] = xlsread('gj_shocks_m.xlsx', 'bab', 'A:A');
+babDates = datetime(bdates(3:end));
+
+% Neuenkirch (2013)
+[neuShocks, ~, ~] = xlsread('gj_shocks_m.xlsx', 'neu');
+[~, ndates, ~] = xlsread('gj_shocks_m.xlsx', 'neu', 'A:A');
+neuDates = datetime(ndates(3:end));
+
+save ez_shocks -v7.3 babDates babShocks neuDates neuShocks
 
 % Flip ECB announcement series
 ydate = flipud(announceDates);
