@@ -5,6 +5,46 @@
 %clear; clc;
 %addpath('..\R;..\MATLAB;..\..\..\Data')
 
+
+% ----------------
+% Replicate Babecka Kucharcukova et al. (2016)
+% [babShocks, ~, ~] = xlsread('gj_shocks_m.xlsx', 'bab');
+% [~, bdates, ~] = xlsread('gj_shocks_m.xlsx', 'bab', 'A:A');
+% babDates = datetime(bdates(3:end));
+
+%h5disp('bab_data.h5')
+bdates = datetime(h5read('bab_data.h5', '/dates'));
+bnames = h5read('bab_data.h5', '/varnames');
+bx  = h5read('bab_data.h5', '/data')';
+
+bta = datetime('2000-01-01');
+bte = datetime('2015-12-01');
+btaindex = find(bdates == bta);
+bteindex = find(bdates == bte);
+
+bsample = btaindex:bteindex;
+
+% PCA
+rhat = 3;
+demean = 2;
+
+[Fhat, LF, ef, evf] = factors(bx(bsample, :), rhat, demean);
+
+sumeigval = cumsum(evf)/sum(evf);
+R2_static = sum(evf(1:rhat))/sum(evf);
+
+sign = [-1, -1, 1];
+
+Fhat1 = sign.*Fhat;
+
+summarize(Fhat);
+
+figure
+plot(standardise(Fhat1(:, 1:3)))
+
+
+
+
 % ----------------
 % Load data
 

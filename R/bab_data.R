@@ -26,27 +26,28 @@ datastream_bab = read_excel(file.path(location.data, "DATASTREAM_REQUEST_MONTHLY
                             sheet = "bab", col_names = TRUE, na = "NA", skip = 1, guess_max = 6000)
 
 # Extract dates
-source("monthStart.R")
-dates = monthStart(datastream_bab[[1]])
+source("dateShift.R")
+dates = dateShift(datastream_bab[[1]], unit = 'month', rule = 'start')
 #ta = first(dates)
 #te = last(dates)
 
 # Build dataset
 bab_data = datastream_bab %>%
   
+  rename(EUEONIA = "EUEONIA(IO)") %>%
+  
   select(-starts_with("X__")) %>% # Remove empty columns
   select(-starts_with("Code")) %>% # Remove date columns
+  select(-c(OIEURSW, OIEUR2W, OIEUR1M, OIEUR3M, OIEUR10, OIEUR1Y, EUDOLLR)) %>% # Remove unneeded series
   
-  mutate_at(vars(EMECASM), funs(replace(., is.na(.), 0))) # Set NA values in EMECASM to zero
+  mutate_at(vars(EMECASM), funs(replace(., is.na(.), 0))) %>% # Set NA values in EMECASM to zero
   
-  mutate_at(vars(-c(EMPRATE., EMIBOR3., EMIBOR1Y, EMGBOND.,
-                  OIEURSW, OIEUR2W, OIEUR1M, OIEUR3M, OIEUR10, OIEUR1Y)), # Exclude interest rates
-          funs(. - lag(., n = 12))) # Year on year differences
-  
+  mutate_at(vars(-c(EMPRATE., EMIBOR3., EMIBOR1Y, EMGBOND., EUEONIA)), # Exclude interest rates
+          funs(. - lag(., n = 12))) %>% # Year on year differences
 
-plot(bab_data$EUDOLLR, type = "l")
-lines(1/bab_data$USEURSP, col = "blue")
-
+  mutate_at(vars(-c(EMPRATE., EMIBOR3., EMIBOR1Y, EMGBOND., EUEONIA, USEURSP)), # Exclude interest rates and exchange rate
+          funs(.*(-1))) # Switch sign
+  
 
 
 # Inquire position of the first and last row which contains no empty cells in array
@@ -58,13 +59,12 @@ ta = dates[ta.index]
 te = dates[te.index]
 sample = ta.index:te.index
 
-
 # Save data to workspace
 save(dates, bab_data, file = "bab_data.RData")
 
 # Prepare data for export
 out.varnames  = colnames(bab_data)
-out.dates     = as.character.Date(dates)
+out.dates     = as.character.Date(dates[sample])
 out.data      = as.matrix(bab_data[sample, ]) # level data
 
 # Save results to HDF5
