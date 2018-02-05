@@ -22,7 +22,59 @@ location.data = normalizePath(file.path("..", "..", "..", "Data"), winslash = "/
 
 
 
-# Read Fagan AWM data (quarterly)
+# VAR data monthly --------------------------------------------------------
+datastream_ez = read_excel(file.path(location.data, "DATASTREAM_REQUEST_MONTHLY.xls"), 
+                           sheet = "ez", col_names = TRUE, na = "NA", skip = 1, guess_max = 6000)
+
+
+# Extract dates
+source("dateShift.R")
+dates = dateShift(datastream_ez[[1]], unit = 'month', rule = 'start')
+#ta = first(dates)
+#te = last(dates)
+
+# Build dataset
+ez_vardata = datastream_ez %>%
+  
+  rename(EMEBCPGS = "EMEBCPGS%") %>%
+  rename(EMTOTUNQ = "EMTOTUN%Q") %>%
+  rename(EKUNTOTQ = "EKUN%TOTQ") %>%
+  
+  select(-starts_with("X__")) %>% # Remove empty columns
+  select(-starts_with("Code")) %>% # Remove date columns
+  select(-c(EKIMPPRCF)) %>% # Remove short series
+
+  mutate_at(vars(EMECASM), funs(replace(., is.na(.), 0))) # Set NA values in EMECASM to zero
+
+
+# Inquire position of the first and last row which contains no empty cells in array
+ta.index = first(which( rowSums(is.na(ez_vardata)) == 0 ))
+te.index = last(which( rowSums(is.na(ez_vardata)) == 0 ))
+
+# Construct time range of largest complete dataset
+ta = dates[ta.index]
+te = dates[te.index]
+sample = ta.index:te.index
+
+# Save data to workspace
+save(dates, ez_vardata, file = "ez_vardata.RData")
+
+# Prepare data for export
+out.varnames  = colnames(ez_vardata)
+out.dates     = as.character.Date(dates[sample])
+out.data      = as.matrix(ez_vardata[sample, ])
+
+# Save results to HDF5
+out.file = h5file("ez_vardata.h5", mode = "w")
+out.file["/varnames"] = out.varnames
+out.file["/dates"] = out.dates
+out.file["/data"] = out.data
+h5close(out.file)
+
+
+
+
+# AWM data quarterly ------------------------------------------------------
 awmdata_ez = read_csv(file.path(location.data, "ez_awmdata.csv"))
 
 # Read raw data from datastream request file
