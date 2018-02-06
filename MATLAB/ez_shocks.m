@@ -21,12 +21,28 @@ vnames = h5read('ez_vardata.h5', '/varnames');
 vdata  = h5read('ez_vardata.h5', '/data')';
 
 % Choose variables for small monetary VAR
-activity = {'EKIPMAN.G', 'EKIPTOT.G'};
 prices = {'EKCPHARMF', 'EMCPCOR5F', 'EKCPCOREF'};
+activity = {'EKIPMAN.G', 'EKIPTOT.G'};
+interest = {'EMPRATE.', 'EMIBOR3.', 'EMIBOR1Y'};
+money = {'EMM1....B', 'EMM2....B', 'EMM3....B'};
 exchange = {'USEURSP'};
-mp = {'EMIBOR3.'};
 
-selectVariables = {'EKIPMAN.G', 'EKCPHARMF', 'EMIBOR3.', 'USEURSP'};
+figure
+subplot(2, 2, 1)
+plot(vdates, vdata(:, findstrings(vnames, prices)))
+subplot(2, 2, 2)
+plot(vdates, vdata(:, findstrings(vnames, activity)))
+subplot(2, 2, 3)
+plot(vdates, vdata(:, findstrings(vnames, interest)))
+subplot(2, 2, 4)
+plot(vdates, vdata(:, findstrings(vnames, money)))
+
+
+selectVariables = {'EKIPMAN.G', 'EKCPHARMF', 'EMIBOR3.', 'EMM1....B'}; % Ordered like CEE1999
+y = vdata(:, findstrings(vnames, selectVariables));
+dy = diff(y);
+
+var1 = var(dy, 2);
 
 
 % ECB MP announcements
