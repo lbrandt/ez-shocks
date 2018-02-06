@@ -33,6 +33,7 @@ dates = dateShift(datastream_ez[[1]], unit = 'month', rule = 'start')
 #ta = first(dates)
 #te = last(dates)
 
+
 # Build dataset
 ez_vardata = datastream_ez %>%
   
@@ -43,6 +44,14 @@ ez_vardata = datastream_ez %>%
   select(-starts_with("X__")) %>% # Remove empty columns
   select(-starts_with("Code")) %>% # Remove date columns
   select(-c(EKIMPPRCF)) %>% # Remove short series
+  
+  mutate_at(vars(-c(EMPRATE., EMIBOR3., EMIBOR1Y, EMGBOND., OIEURSW, OIEUR2W, OIEUR1M, OIEUR3M, OIEUR10, OIEUR1Y, USEURSP, # Interest rates
+                    EKEBUN..O, EMUNPTOTO, EKEBUN..O, EMTOTUNQ, EKUNTOTQ, # Unemployment rates
+                    EMEBCPGS, EKCAFBALA)), # CPI rate & Balance 
+            funs(log(.))) %>% # Log
+
+  #mutate_at(vars(c(EMM1....B, EMM2....B, EMM3....B, EMASTOT, EMECASM, EMECLBC, EMECLEM,
+  #                 EKEBCARRO, EMACECARP, EMECBALEA, EMSHRPRCF, EMCRDCONA)), funs(log(.))) %>% # Log
 
   mutate_at(vars(EMECASM), funs(replace(., is.na(.), 0))) # Set NA values in EMECASM to zero
 
