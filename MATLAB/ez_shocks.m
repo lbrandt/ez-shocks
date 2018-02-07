@@ -41,8 +41,44 @@ plot(vdates, vdata(:, findstrings(vnames, money)))
 selectVariables = {'EKIPMAN.G', 'EKCPHARMF', 'EMIBOR3.', 'EMM1....B'}; % Ordered like CEE1999
 y = vdata(:, findstrings(vnames, selectVariables));
 dy = diff(y);
+[T, N] = size(dy);
 
-var1 = var(dy, 2);
+nlag = 12;
+
+var1 = vare(dy, nlag);
+%plt_var(var1,  char(selectVariables))
+
+% Reduced form residuals in matrix
+ehat = zeros(T-nlag, N);
+for i = 1:N
+    ehat(:, i) = var1(i).resid;
+end
+
+% Covariance matrix of reduced form sigma_eta
+sigma = ehat'*ehat/(T-nlag-(N*nlag+1));
+
+% Identify contemporaneous parameter matrix via Cholesky
+chols = chol(sigma, 'lower');
+
+% Normalise diagonal of Hjj to unity
+%H = chols*diag(diag(chols).^2)^(-1/2);
+H = chols./diag(chols)';
+
+% Identify structural shocks from reduced form residuals
+epsilon = ehat*inv(H)';
+
+summarize(epsilon);
+
+plot(vdates((2+nlag):end), epsilon)
+
+
+eps2 = ehat*inv(chols)';
+
+summarize(eps2);
+
+plot(vdates((2+nlag):end), eps2)
+
+
 
 
 % ECB MP announcements
