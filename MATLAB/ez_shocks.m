@@ -68,6 +68,8 @@ H = chols./diag(chols)';
 epsilon = ehat*inv(H)';
 
 summarize(epsilon);
+plot(epsilon)
+
 
 plot(vdates((2+nlag):end), epsilon)
 
@@ -75,8 +77,11 @@ plot(vdates((2+nlag):end), epsilon)
 eps2 = ehat*inv(chols)';
 
 summarize(eps2);
-
 plot(vdates((2+nlag):end), eps2)
+
+
+
+
 
 
 
