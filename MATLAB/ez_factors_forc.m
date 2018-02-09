@@ -9,7 +9,7 @@
 clear; clc;
 
 % Load and manipulate data in import_data. Call script here:
-load ez_data90_q
+load ez_data
 
 
 %%%%
@@ -26,11 +26,6 @@ end
 bnicmin = min(bnicv);
 rhat = minind(bnicv); % Optimal number of factors according to lowest IC
 fprintf('\nFactors via IC(%d): rhat = %d \n', gnum, rhat);
-
-
-%%%% Override BNIC
-rhat = 3
-%%%%
 
 
 %%%%
@@ -56,7 +51,7 @@ zt       = [Fhat, Fhat(:, 1).^2, Ghat(:, 1)];
 yt       = standardise(x);
 [T, N]   = size(yt);
 
-py       = 2; % number of depvar lags
+py       = 4; % number of depvar lags
 pz       = 2; % number of predictor lags
 maxlag   = max(py, pz);
 
@@ -85,9 +80,9 @@ for j = 1:N % Estimate system equation-by-equation
 end
 
 
-% Generate AR(2) errors for Predictor set zt
+% Generate AR(4) errors for Predictor set zt
 [T, R]   = size(zt);
-pf       = 2;
+pf       = 4;
 L        = fix(4*(T/100)^(2/9));
 
 fbetas   = zeros(1 + pf, R); % Parameter vectors of single equations in columns
@@ -109,4 +104,4 @@ end
 maxlag = max([py, pz, pf]); % Maximum lag length out of all regressions run in file
 dates = dates(1+maxlag:end);
 
-save ez_factors_forc -v7.3 dates yfit ffit ybetas fbetas vyt vft varnames py pz pf zt x ymodels
+save ez_factors_forc -v7.3 dates yfit ffit ybetas fbetas vyt vft names py pz pf zt x ymodels

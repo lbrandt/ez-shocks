@@ -1,7 +1,5 @@
 # EZ data
 
-#rm(list=ls())
-
 require(tidyverse)
 require(readxl)
 require(h5)
@@ -50,20 +48,19 @@ ez_data = datastream_ez %>%
 
 
 # Read metadata
-ez_meta = read_csv(file.path(location.data, "ez_data_varlist.csv"), col_names = TRUE, col_types = "icccciiii", na = "NA")
-  
+ez_meta = read_delim(file.path(location.data, "ez_data_meta.csv"), delim = ";", col_names = TRUE, na = "NA")
+ez_meta$code = gsub("[&, %, $]", "", ez_meta$code) # Remove R operators
 
-ez_data = ez_data %>%
-  
-  mutate_at(vars(-c(EMPRATE., EMIBOR3., EMIBOR1Y, EMGBOND., OIEURSW, OIEUR2W, OIEUR1M, OIEUR3M, OIEUR10, OIEUR1Y, USEURSP, # Interest rates
-                    EKEBUN..O, EMUNPTOTO, EKEBUN..O, EMTOTUNQ, EKUNTOTQ, # Unemployment rates
-                    EMEBCPGS, EKCAFBALA)), # CPI rate & Balance 
-            funs(log(.))) %>% # Log
-  
-  #mutate_at(vars(c(EMM1....B, EMM2....B, EMM3....B, EMASTOT, EMECASM, EMECLBC, EMECLEM,
-  #                 EKEBCARRO, EMACECARP, EMECBALEA, EMSHRPRCF, EMCRDCONA)), funs(log(.))) %>% # Log
-  
-  mutate_at(vars(EMECASM), funs(replace(., is.na(.), 0))) # Set NA values in EMECASM to zero
+# Write transform column to ez_data attributes
+for(i in 1:dim(ez_data)[2]){
+  attr(ez_data, "transformation")[i] = ez_meta$transform[which(ez_meta$code == names(ez_data)[i])]
+}
+
+
+ez_tdata = ez_data %>%
+  mutate_if(.predicate = attributes(ez_data)$transformation == 1, funs(. - lag(.))) %>% # Diffs
+  mutate_if(.predicate = attributes(ez_data)$transformation == 2, funs(log(.) - lag(log(.)))) # Logdiffs
+
 
 
 # Inquire position of the first and last row which contains no empty cells in array
@@ -76,18 +73,20 @@ te = dates[te.index]
 sample = ta.index:te.index
 
 # Save data to workspace
-save(dates, ez_vardata, file = "ez_data.RData")
+save(dates, ez_data, ez_tdata, ez_meta, file = "ez_data.RData")
 
 # Prepare data for export
-out.varnames  = colnames(ez_data)
-out.dates     = as.character.Date(dates[sample])
-out.data      = as.matrix(ez_data[sample, ])
+out.names = colnames(ez_data)
+out.dates = as.character.Date(dates[sample])
+out.data  = as.matrix(ez_data[sample, ])
+out.tdata = as.matrix(ez_tdata[sample, ])
 
 # Save results to HDF5
 out.file = h5file("ez_data.h5", mode = "w")
-out.file["/varnames"] = out.varnames
+out.file["/names"] = out.names
 out.file["/dates"] = out.dates
-out.file["/data"] = out.data
+out.file["/data"]  = out.data
+out.file["/tdata"] = out.tdata
 h5close(out.file)
 
 

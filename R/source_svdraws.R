@@ -1,3 +1,3 @@
-source("de_svfdraws.R")
+source("ez_svfdraws.R")
 rm(list = ls())
-source("de_svydraws.R")
+source("ez_svydraws.R")
