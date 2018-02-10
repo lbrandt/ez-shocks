@@ -8,9 +8,12 @@
 % ----------------
 % Load data
 load de_data
+load de_shocks
 
 % Babecka Kucharcukova et al. MP shocks for euro area
 load ez_shocks
+summarize(babShocks);
+summarize(neuShocks);
 
 % Aggregate macroeconomic uncertainty
 load de_uncertainty
@@ -24,25 +27,40 @@ udum = (Ufac >= Umean + 1*Ustd);
 mdum = (month(dates) == 12);
 
 % Identify overlap in sample
-% ta = babDates(1);
-% te = babDates(end);
-ta = neuDates(1);
-te = neuDates(end);
+wta = wxDates(1);
+wte = wxDates(end);
+
+wtaindex = find(dates == wta);
+wteindex = find(dates == wte);
+
+wsample = wtaindex:wteindex;
+wT = length(wsample);
+
+bta = babDates(1);
+bte = babDates(end);
+nta = neuDates(1);
+nte = neuDates(end);
 
 dates = dateshift(dates, 'start', 'month');
 
-taindex = find(dates == ta);
-teindex = find(dates == te);
+btaindex = find(dates == bta);
+bteindex = find(dates == bte);
+ntaindex = find(dates == nta);
+nteindex = find(dates == nte);
 
-sample = taindex:teindex;
-T = length(sample);
+nsample = ntaindex:nteindex;
+bsample = btaindex:bteindex;
+nT = length(nsample);
+bT = length(bsample);
 
 
 % ----------------
 % IRF via R&R incomplete VAR regression
+sample = bsample;
+
 
 % Select dependent variable
-deip = x(5:end, strcmp(varnames, {'BDIPTOTG'})); % Cut off leading observations because of lags in factor model
+deip = x(:, strcmp(varnames, {'BDIPTOTG'}));
 depvar = deip(sample);
 
 % Lag order
@@ -53,21 +71,21 @@ slag  = 36;
 maxlag = max([dlag, ylag, slag]);
 
 % Lag before sample select, such that presample counts
-dum12lags  = mlag(mdum, dlag);
+mdumlags  = mlag(mdum, dlag);
 depvarlags = mlag(deip, ylag);
-shocklags  = mlag(neuShocks, slag);
+shocklags  = mlag(babShocks, slag);
 
 % Matrix of independent variables
-X = [dum12lags(sample, :), depvarlags(sample, :), shocklags(:, :)];
+X = [ones(length(sample), 1), mdumlags(sample, :), depvarlags(sample, :), shocklags(:, :)];
 
 % OLS
-coeffs = ols(depvar, X, const);
+linreg = ols(depvar, X);
 
 % The estimated betas of the shock are the same as in paper. Yay!
-c = coeffs((const + dlag + ylag + 1):end);
+c = linreg.beta((const + dlag + ylag + 1):end);
 
 % Append zeros to autoregressive coeffs
-b = [coeffs((const + dlag + 1):((const + dlag + ylag))); zeros(maxlag - ylag, 1)];
+b = [linreg.beta((const + dlag + 1):((const + dlag + ylag))); zeros(maxlag - ylag, 1)];
 
 % Dimension companion matrix (incomplete VAR) for IRF
 varnum = 2;
@@ -95,9 +113,9 @@ for h = 1:hmax
     impact(h) = AH(varselect, shockselect); % Impact multipliers
 end
 
-rrirf = cumsum(impact);
+bvarirf = cumsum(impact);
 
-
+plot(bvarirf)
 
 
 % ----------------
@@ -105,10 +123,7 @@ rrirf = cumsum(impact);
 
 % Choose variable of interest from factor model dataset
 chooseVariable = {'BDIPTOTG', 'BDUN_TOTQ', 'BDCONPRCE'};
-depvar = x(5:end, strcmp(varnames, {'BDIPTOTG'})); % Cut off leading observations because of lags in factor model in order to match dimensions of U
-
-% Choose series of shocks
-shocks = neuShocks;
+depvar = x(1:end, strcmp(varnames, {'BDIPTOTG'})); % Cut off leading observations because of lags in factor model in order to match dimensions of U
 
 % Construct leads and lags of dependent variable
 hmax = 48;
@@ -124,19 +139,26 @@ ulag  = 12;
 mdumlags = mlag(mdum, dlag);
 udumlags = mlag(udum(:, 1), ulag);
 
-controls = [ones(T, 1), mdumlags(sample, :)];
+controls = [ones(length(dates), 1), mdumlags];
 
 % Choose lag order for NW correction
-nlag  = fix(4*(T/100)^(2/9)); % Rule-of-thumb (N&W 1994)
+%nlag  = fix(4*(T/100)^(2/9)); % Rule-of-thumb (N&W 1994)
+nlag = 4;
 
 % Estimate and plot IRF
-jorda = irf_jorda(yLeads(sample, :), yLags(sample, :), shocks, controls, nlag);
+wjorda = irf_jorda(yLeads(wsample, :), yLags(wsample, :), wxres, controls(wsample, :), nlag);
+bjorda = irf_jorda(yLeads(bsample, :), yLags(bsample, :), babShocks, controls(bsample, :), nlag);
+njorda = irf_jorda(yLeads(nsample, :), yLags(nsample, :), neuShocks, controls(nsample, :), nlag);
 
-plot(jorda.irf)
+
+plot(wjorda.irf)
 hold on
-plot(rrirf)
+plot(bjorda.irf)
+hold on
+plot(njorda.irf)
 hold on
 refline(0, 0)
+
 
 
 % Desired interval coverage via HAC standard errors
