@@ -1,4 +1,4 @@
-function [pminAIC, pminBIC, pminHQC, resultstable] = aroptlag(y, pmax, const, trend, out)
+function [popt, icmin, resultstable] = aroptlag(y, pmax, ic, const, trend, out)
 % -------------------------------------------------------------------------
 % Determines the optimal lag order of an autoregressive model via the AIC,
 % BIC and Hannan-Quinn criterion. Outputs a structure which contains values
@@ -9,7 +9,7 @@ function [pminAIC, pminBIC, pminHQC, resultstable] = aroptlag(y, pmax, const, tr
 %           const   Indicates intercept in regression {0, 1}
 %           trend   Indicates trend in regression {0, 1}
 %
-%   Output: pminAIC, pminBIC, pminHQC
+%   Output:
 % -------------------------------------------------------------------------
 
 T = length(y);
@@ -48,16 +48,30 @@ for p = 1:pmax
     hqcv(p) = hqc;
 end
 
-[minAIC, pminAIC] = min(aicv);
-[minBIC, pminBIC] = min(bicv);
-[minHQC, pminHQC] = min(hqcv);
+[minAIC, pminAIC] = min(aicv); 
+[minBIC, pminBIC] = min(bicv); 
+[minHQC, pminHQC] = min(hqcv); 
 
+if isempty(ic)
+    icmin = [];
+    popt  = [];
+elseif ic == 'aic'
+    icmin = minAIC;
+    popt  = pminAIC;
+elseif ic == 'bic'
+    icmin = minBIC;
+    popt  = pminBIC;
+elseif ic == 'hqc'
+    icmin = minHQC;
+    popt  = pminHQC;
+end
+
+resultstable = table(llv, aicv, bicv, hqcv);
 % Output results if indicated
 if out == 1
     fprintf('\n Optimal lag order, AIC: p = %d at AIC = %f \n', pminAIC, minAIC);
     fprintf('\n Optimal lag order, BIC: p = %d at BIC = %f \n', pminBIC, minBIC);
     fprintf('\n Optimal lag order, HQC: p = %d at HQC = %f \n', pminHQC, minHQC);
-    resultstable = table(llv, aicv, bicv, hqcv);
     display(resultstable);
 end
 
