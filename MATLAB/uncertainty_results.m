@@ -93,7 +93,7 @@ end
 
 summarize(Uavg)
 % Does it hold that U is larger for larger h?
-tselect = 250;
+tselect = 150;
 vselect = 1:9;
 
 figure

@@ -6,7 +6,7 @@
 %
 % -------------------------------------------------------------------------
 
-clear; clc;
+%clear; clc;
 
 % Load and manipulate data in import_data. Call script here:
 load ez_data
@@ -39,6 +39,24 @@ fprintf('\nFactors via IC(%d): rhat = %d \n', gnum, rhat);
 
 sumeigval = cumsum(evf)/sum(evf);
 R2_static = sum(evf(1:rhat))/sum(evf);
+
+
+% AR order of Fhat
+pmax = 24;
+
+const = 1;
+trend = 0;
+
+picf = zeros(rhat, 3);
+icf = zeros(rhat, 3);
+for i = 1:rhat
+    [picf(i, 1), icf(i, 1)] = aroptlag(Fhat(:, i), pmax, 'aic', const, trend, 0);
+    [picf(i, 2), icf(i, 2)] = aroptlag(Fhat(:, i), pmax, 'bic', const, trend, 0);
+    [picf(i, 3), icf(i, 3)] = aroptlag(Fhat(:, i), pmax, 'hqc', const, trend, 0);
+end
+% Maximum lag length suggested by ICs is p = 4. Err on the side of caution?
+%aroptlag(Fhat(:, 1), pmax, [], 1, 0, 1);
+
 
 %%%%
 % Forecast
