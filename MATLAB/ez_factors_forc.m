@@ -30,10 +30,6 @@ fprintf('\nFactors via IC(%d): rhat = %d \n', gnum, rhat);
 
 %%%%
 % Extract factors via PCA
-
-%[ehat1, Fhat1, lamhat1, ev1]  = jln_factors(x, kmax, gnum, demean);
-%[ehat1, Ghat1, lamhat1, ev1]  = jln_factors(x.^2, kmax, gnum, demean);
-
 [Fhat, LF, ef, evf] = factors(x, rhat, demean);
 [Ghat, LG, eg, evg] = factors(x.^2, rhat, demean);
 

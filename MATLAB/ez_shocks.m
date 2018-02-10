@@ -66,16 +66,11 @@ H = chols./diag(chols)';
 
 % Identify structural shocks from reduced form residuals
 epsilon = ehat*inv(H)';
-
 summarize(epsilon);
 plot(epsilon)
 
 
-plot(vdates((2+nlag):end), epsilon)
-
-
 eps2 = ehat*inv(chols)';
-
 summarize(eps2);
 plot(vdates((2+nlag):end), eps2)
 
@@ -85,13 +80,6 @@ plot(vdates((2+nlag):end), eps2)
 
 
 
-
-% ECB MP announcements
-[ddata, ~, ~] = xlsread('ez_announce.xlsx');
-[~, dname, ~] = xlsread('ez_announce.xlsx', 'B1:D1');
-[~, ddate, ~] = xlsread('ez_announce.xlsx', 'A:A');
-
-announceDates = datetime(ddate(2:end));
 
 % Euro OIS
 %h5disp('ois_data.h5')
@@ -121,6 +109,19 @@ neuDates = datetime(ndates(3:end));
 
 save ez_shocks -v7.3 babDates babShocks neuDates neuShocks
 
+
+
+% ----
+% Cloyne & Huertgen
+
+% ECB MP announcements
+[ddata, ~, ~] = xlsread('ez_announce.xlsx');
+[~, dname, ~] = xlsread('ez_announce.xlsx', 'B1:D1');
+[~, ddate, ~] = xlsread('ez_announce.xlsx', 'A:A');
+
+announceDates = datetime(ddate(2:end));
+
+
 % Flip ECB announcement series
 ydate = flipud(announceDates);
 
@@ -146,11 +147,41 @@ end
 % Plot ECB monetary policy corridor by meeting
 figure
 for i = 1:3
-    plot(ydate(sample), y(sample, i))
+    plot(ydate(:), y(:, i))
     hold on
 end
-plot(ydate(sample), (sample*0), 'black') % Add zero line
+plot(ydate(:), zeros(1, length(ydate)), 'black') % Add zero line
 hold off
+
+
+
+% Load factor model data
+load ez_data
+
+% Find optimal number of factors according to Bai & Ng (2002)
+kmax   = 20; % Maximum number of factors considered
+gnum   = 2; % Choose ICp2
+demean = 2; % Standardise data before PCA
+
+bnicv = zeros(kmax,1);
+for k = 1:kmax
+    bnicv(k) = bnic(x, k, gnum, demean); % Compute BNIC for each k
+end
+rhat = minind(bnicv);
+
+% Extract rhat factors via PCA
+[Fhat, Lhat, ef, evf] = factors(x, rhat, demean);
+
+sumeigval = cumsum(evf)/sum(evf);
+R2_static = sum(evf(1:rhat))/sum(evf);
+
+
+% Select variables to forecast
+selectVariables = {'EKIPTOT.G', 'EKCPHARMF', 'EMIBOR3.', 'EMM1....B'};
+y = vdata(:, findstrings(vnames, selectVariables));
+
+
+
 
 
 % Compute shock series as residual from static regression
