@@ -1,8 +1,10 @@
 # Function which plots a dataframe to pdf
-plotpdf = function(data, rows, columns, filepath, mfrow, type){
+plotpdf = function(data, filepath, mfrow, type){
   
   path = normalizePath(filepath, winslash = "/")
   pdf(file = path)
+  
+  columns = dim(data)[2]
   
   par(mfrow = mfrow)
   for(i in columns){
@@ -14,10 +16,3 @@ plotpdf = function(data, rows, columns, filepath, mfrow, type){
   par(mfrow = c(1,1))
   
 }
-
-ez_data[2]
-ez_data[[3:10, 2]]
-
-plot(ez_data[[2]])
-
-plot(ez_data[[3:10, 2])
