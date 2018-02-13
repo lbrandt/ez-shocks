@@ -1,12 +1,13 @@
 function results = irf_jorda(depvarLeads, depvarLags, x, controls, l)
 % -------------------------------------------------------------------------
 % Estimates an impulse response function following Jorda's local projection
-% approach. (AER, 2005, Vol. 95, No. 1, pp. 161-182)
+% approach. (AER, 2005, Vol. 95, No. 1, pp. 161-182) Supports interaction
+% terms as multiple columns in x.
 %
 %   Input
 %       yLeads      Matrix of leads of variable of interest [T x H]
 %       yLags       Matrix of lags of variable of interest [T x P]
-%       x           Series of exogenous shocks [T x 1]
+%       x           Series of exogenous shocks [T x N]
 %       controls    Matrix of other controls, e.g. intercept, trends, dummies
 %       l           Number of lags for Newey-West correction
 %       
@@ -36,10 +37,6 @@ if isequal(T, T1, T2, T3) == 0
     error('Dimensions must align.');
 end
 
-if N ~= 1
-    error('Must supply only one shock series.');
-end
-
 % Default Newey-West lag order
 if nargin < 5 || isempty(l)
     warning('Defaults to N&W (1994) rule-of-thumb if lag order not specified.')
@@ -49,16 +46,16 @@ end
 
 % ----------------
 % IRF via Jorda's local projection method
-theta = zeros(H, 1);
-sigma = zeros(H, 1);
+theta = zeros(H, N);
+sigma = zeros(H, N);
 
 for i = 1:H
     depvar = depvarLeads(:, i);
     regression = nwest(depvar, [x, depvarLags, controls], l);
     % Select impact multiplier from parameter vector
-    theta(i) = regression.beta(1);
+    theta(i, :) = regression.beta(1:N);
     % Recover HAC standard errors used in function via $results.tstat = results.beta./nwerr;
-    sigma(i) = regression.beta(1)/regression.tstat(1);
+    sigma(i, :) = regression.beta(1:N)./regression.tstat(1:N);
 end
 
 results.T = T;
