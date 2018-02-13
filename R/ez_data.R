@@ -36,30 +36,26 @@ dates = dateShift(datastream_ez[[1]], unit = 'month', rule = 'start')
 # Build dataset
 ez_data = datastream_ez %>%
   
-  rename(EKESCDER = "EKESCDE&R") %>%
-  rename(USUNTOTQ = "USUN%TOTQ") %>%
-  rename(SWHWWAEF = "SWHWWAE$F") %>%
-  rename(SPCOMP = "S&PCOMP") %>%
-  
   select(-starts_with("X__")) %>% # Remove empty columns
-  select(-starts_with("Code")) %>% # Remove date columns
-  
-  select(-c(EKESIENGG__1)) # Remove duplicate series
+  select(-starts_with("Code")) # Remove date columns
 
+colnames(ez_data) = gsub("[&, %, $]", "", colnames(ez_data)) # Remove R operators from names
 
 # Read metadata
-ez_meta = read_delim(file.path(location.data, "ez_data_meta.csv"), delim = ";", col_names = TRUE, na = "NA")
-ez_meta$code = gsub("[&, %, $]", "", ez_meta$code) # Remove R operators
+ez_meta = read_excel(file.path(location.data, "ez_data_meta.xlsx"), col_names = TRUE, na = "NA")
+ez_meta$code = gsub("[&, %, $]", "", ez_meta$code) # Remove R operators from names
 
 # Write transform column to ez_data attributes
 for(i in 1:dim(ez_data)[2]){
   attr(ez_data, "transformation")[i] = ez_meta$transform[which(ez_meta$code == names(ez_data)[i])]
 }
 
+attributes(ez_data)$transformation
 
 ez_tdata = ez_data %>%
   mutate_if(.predicate = attributes(ez_data)$transformation == 1, funs(. - lag(.))) %>% # Diffs
   mutate_if(.predicate = attributes(ez_data)$transformation == 2, funs(log(.) - lag(log(.)))) # Logdiffs
+
 
 
 
