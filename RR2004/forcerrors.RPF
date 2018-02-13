@@ -1,0 +1,1035 @@
+****************************************************************************************************************
+***   GER Private Consumption Survey VAR
+
+
+source(noecho) "C:\Dateien\My Dropbox\Lennart\Seminar\RATS\Consumption Data.rpf"
+source(noecho) "C:\Dateien\My Dropbox\Prognose\Gesamtrechnung\Modelle\src\autokorrelationstests.src"
+
+
+*****************************************
+* DUMMY VARIABLES
+
+* DFITS
+comp numdum = 2020:4 - 1960:1
+
+declare vector[series] dum(numdum)
+do time = 1,numdum
+   set dum(time) / = 0.0
+   set dum(time) time time = 1.0
+   label dum(time) ; # 'DUM('+%datelabel(time)+')'
+end do time
+
+declare vector[series] dummy(numdum)
+do time = 1,numdum
+   set dummy(time) / = 0.0
+   set dummy(time) time * = 1.0
+   label dummy(time) ; # 'DUMMY('+%datelabel(time)+')'
+end do time
+
+declare vector[series] dummybis(numdum)
+do time = 1,numdum
+   set dummybis(time) / = 1.0
+   set dummybis(time) time * = 0.0
+   label dummybis(time) ; # 'DUMMYBIS('+%datelabel(time)+')'
+end do time
+
+
+* Seasonals
+set dq4 / = %if(%month(t)==4,1.0,0.0)
+*****************************************
+
+
+set lncons / = log(cons)
+set lncnn /  = log(consnnsa)
+set lnc /    = log(consn)
+set lncr /   = log(consreal)
+set lnassr / = log(hhnetr)
+set euribr / = euribor3r(t)
+
+set dlncons / = lncons(t) - lncons(t-1)
+set dlncnn /  = lncnn(t) - lncnn(t-1)
+set dlnc /    = lnc(t) - lnc(t-1)
+set dlncr /   = lncr (t) - lncr(t-1)
+set dlnassr / = lnassr(t) - lnassr(t-1)
+set deuribr / = euribor3r(t) - euribor3r(t-1)
+
+set d4lncnn /    = lncnn(t) - lncnn(t-4)
+set d4lncons /   = lncons(t) - lncons(t-4)
+set d4lnc /      = lnc(t) - lnc(t-4)
+set d4lnassr /   = lnassr(t) - lnassr(t-4)
+set dgfkbc /     = gfkbc(t) - gfkbc(t-1)
+set dgfkinc /    = gfkinc(t) - gfkinc(t-1)
+set dgfkwill /   = gfkwill(t) - gfkwill(t-1)
+set difobal /    = ifobal(t) - ifobal(t-1)
+
+set ddlnassr / = dlnassr(t) - dlnassr(t-1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+****************************************************************************************************************
+**** SA Data
+****************************************************************************************************************
+
+*@bjautofit(pmax=12,qmax=0,crit=CAIC) dlncr regstart regend
+
+********
+**** Model: AR long sample
+
+comp regstart = 1983:4
+comp regend   = 2016:2
+comp maxlags  = 7
+
+stwise(method=backwards,slstay=0.05,force=9,define=eqar) DLNCR regstart regend RESAR
+# constant dummy(1992:2) dum(1987:1) dum(1988:1) dum(1991:3) dum(1992:4) dum(1993:1) dum(2007:1) $
+  DLNCR{1 to maxlags}
+@autokorrelationstests(prj,nostatic,breaktests,dfits) RESAR %regstart()-2 %regend() signif
+group armodel eqar
+
+
+
+
+/*
+********
+*** Model: AR short sample
+
+comp regstart = 1993:2
+comp regend   = 2016:2
+comp maxlags  = 10
+
+stwise(method=backwards,slstay=0.05,force=2,define=eqars) DLNCR regstart regend RESARS
+# constant dum(2007:1) DLNCR{1 to maxlags}
+@autokorrelationstests(prj,nostatic,breaktests,dfits) RESARS %regstart()-2 %regend() signif
+group armodel eqars
+*/
+
+
+
+
+forecast(model=armodel,from=2016:2+1,to=2017:4,results=forcar)
+
+* AR Diffs Forecast
+set fdlncr 2016:2 2016:2 = dlncr(t)
+set fdlncr 2016:3 2017:4 = forcar(1)(t)
+graph 2; # dlncr 2014:1 * ; # fdlncr
+
+
+
+
+********
+**** Model: VECM Full model, indicators & money
+
+comp regstart = 1984:4
+comp regend   = 2016:2
+comp maxlags  = 5
+
+frml(identity) gfkincfrml gfkinc = gfkinc(t-1) + dgfkinc(t)
+frml(identity) gfkbcfrml gfkbc = gfkbc(t-1) + dgfkbc(t)
+frml(identity) gfkwillfrml gfkwill = gfkwill(t-1) + dgfkwill(t)
+frml(identity) dlnassrfrml dlnassr = dlnassr(t-1) + ddlnassr(t)
+frml(identity) deuribrfrml dlnassr = euribr(t-1) + deuribr(t)
+
+set dlncrbis004 / = %if(t<2001:1,dlncr,0.0)
+set noddr / = 1.0; set noddr 1991:1 1994:1 = 0.0
+set full / = 1.0
+
+set dgfkwillbis883 / = %if(t<1988:3,dgfkwill,0.0)
+set gfkbcbis984 / = %if(t<1998:4,gfkbc,0.0)
+set gfkbcbis031 / = %if(t<2003:1,gfkbc,0.0)
+
+
+****************************************************************************************************************
+
+
+/*
+stwise(method=backwards,slstay=0.03,force=9,define=eqvec1) DLNCR 1983:3 regend RESVEC1
+# dum(1987:4) dum(1988:1) dum(1991:3) dum(1992:4) dum(1993:1) dum(2000:4) dum(2007:3) gfkbc{1} euribr{6} $
+  dgfkbc{1 to maxlags} dgfkinc{1 to maxlags} dgfkwill{0 to maxlags} DLNCR{1 to maxlags} deuribr{6 to 25}
+*restrict(create) 1; # 9 10; # 1 1 0
+@autokorrelationstests(prj,nostatic,breaktests,dfits) RESVEC1 %regstart()-2 %regend() signif
+
+
+@apbreaktest DLNCR 1983:3 regend
+# %reglist()
+
+comp dwh = (1-0.5*%durbin) * sqrt(%nobs/(1-%nobs*(%stderrs(12))^2))
+disp 'dwh =' dwh
+
+statistics RESVEC4 /
+*/
+
+**** dlncons <-- bc, will
+stwise(method=backwards,slstay=0.05,force=13,define=eqvec1) DLNCR 1983:2 regend RESVEC1
+# constant dummy(1993:1) dummy(2000:3) dum(1987:1) dum(1988:1) dum(1991:1) dum(1991:3) dum(2006:4) dum(2007:1) dum(2007:2) dum(2007:3) gfkbc{1} gfkinc{4} gfkwill{1} $
+  dgfkbc{0 to maxlags} dgfkinc{0 to maxlags} dgfkwill{0 to maxlags} DLNCR{1 to maxlags}
+*restrict(create) 1; # 9 10; # 1 1 0
+@autokorrelationstests(prj,nostatic,breaktests,dfits) RESVEC1 %regstart()-2 %regend() signif
+
+
+**** gfkwill <-- will, inc, r
+stwise(method=backwards,slstay=0.05,force=9,define=eqvec2) DGFKWILL 1983:4 regend RESVEC2
+# dummy(2005:3) dum(2002:1) dum(2006:2) dum(2007:1) dum(2007:3) dum(2007:4) dum(2009:1) gfkwill{1} euribr{6} $
+  dgfkwill{1 to 6} deuribr{6 to 16}
+@autokorrelationstests(prj,nostatic,breaktests,dfits) RESVEC2 %regstart()-2 %regend() signif
+
+
+**** gfkbc <-- bc, will, inc, r
+stwise(method=backwards,slstay=0.03,force=7,define=eqvec3) DGFKBC 1984:1 regend RESVEC3
+# constant dum(2007:2) gfkbcbis984{1} gfkbc{1} gfkwill{1} gfkinc{1} euribr{6} $
+  dgfkbc{1 to maxlags} dgfkwill{1 to maxlags} dgfkinc{1 to maxlags} DLNCR{1 to maxlags} deuribr{6 to 13}
+*restrict(create) 1; # 5 6; # 1 1 0
+@autokorrelationstests(prj,nostatic,breaktests,dfits) RESVEC3 %regstart()-2 %regend() signif
+
+
+**** gfkinc <-- will, inc, r
+stwise(smpl=full,method=backwards,slstay=0.03,force=9,define=eqvec4) DGFKINC 1984:4 regend RESVEC4
+# dum(1986:3) dum(1987:1) dum(1991:3) dum(2006:3) dum(2006:4) dum(2007:2) gfkwill{1} gfkinc{1} euribr{6} $
+  dgfkwill{1 to maxlags} dgfkinc{1 to maxlags} DLNCR{1 to maxlags} deuribr{6 to 31}
+restrict(create) 1; # 7 8; # 1 1 0
+@autokorrelationstests(prj,nostatic,breaktests,dfits,restr=7) RESVEC4 %regstart()-2 %regend() signif
+
+
+
+
+/*
+
+**XYXYXYXYXYXYXYXY
+**** gfkbc <-- bc, will, inc, r
+stwise(method=backwards,slstay=0.03,force=5,define=eqvec3) DGFKBC 1983:4 regend RESVEC3
+# gfkbcbis984{1} gfkbc{1} gfkwill{1} gfkinc{1} euribr{6} $
+  dgfkbc{1 to maxlags} dgfkwill{1 to maxlags} dgfkinc{1 to maxlags} DLNCR{1 to maxlags} deuribr{6 to 13}
+*restrict(create) 1; # 3 4; # 1 2 0
+@autokorrelationstests(prj,nostatic,breaktests,dfits) RESVEC3 %regstart()-2 %regend() signif
+
+
+**** dlnassr <-- will, inc, r
+stwise(method=backwards,slstay=0.03,force=7,define=eqvec5) DDLNASSR regstart regend RESVEC5
+# constant dum(1999:4) dum(2001:3) dum(2001:4) dum(2002:3) dum(2008:1) dlnassr{1} $
+  ddlnassr{1 to maxlags} DLNCR{1 to maxlags} dgfkinc{1 to maxlags} dgfkwill{1 to maxlags} deuribr{6 to 16}
+@autokorrelationstests(prj,nostatic,breaktests,dfits) RESVEC5 %regstart()-2 %regend() signif
+
+* 1-step forc of dlnassr for 2016:2
+forecast(model=eqvec5,from=2016:2,to=2016:2,results=fillforc)
+
+set ddlnassr 2016:2 2016:2 = fillforc(1)(2016:2)
+set dlnassr 2016:2 2016:2 = dlnassr(2016:1) + fillforc(1)(2016:2)
+*
+
+*/
+
+****************************************************************************************************************
+
+
+
+group vecm4 eqvec1 eqvec2 eqvec3 eqvec4
+sur(model=vecm4,resids=SYSRES) * regstart regend
+
+group fvecm4 %MODELEQN(vecm4,1)>>fdlncr %MODELEQN(vecm4,2)>>fdgfkwill %MODELEQN(vecm4,3)>>fdgfkbc $
+               %MODELEQN(vecm4,4)>>fdgfkinc gfkwillfrml>>fgfkwill gfkbcfrml>>fgfkbc gfkincfrml>>fgfkinc
+
+forecast(model=fvecm4,from=2016:2+1,to=2017:4,results=forc4)
+
+
+* VECM Diffs Forecast
+set fdlncr 2016:2 2016:2 = dlncr(t)
+set fdlncr 2016:3 2017:4 = forc4(1)(t)
+graph 2; # dlncr 2014:1 * ; # fdlncr
+
+set fdgfkwill 2016:2 2016:2 = dgfkwill(t)
+set fdgfkwill 2016:3 2017:4 = forc4(2)(t)
+graph 2; # dgfkwill 2014:1 * ; # fdgfkwill
+
+set fdgfkbc 2016:2 2016:2 = dgfkbc(t)
+set fdgfkbc 2016:3 2017:4 = forc4(3)(t)
+graph 2; # dgfkbc 2014:1 * ; # fdgfkbc
+
+set fdgfkinc 2016:2 2016:2 = dgfkinc(t)
+set fdgfkinc 2016:3 2017:4 = forc4(4)(t)
+graph 2; # dgfkinc 2014:1 * ; # fdgfkinc
+
+
+* VECM Level Forecast
+set flncr 2016:2 2016:2 = lncr(t)
+set flncr 2016:3 2017:4 = flncr(t-1) + forc4(1)(t)
+graph 2; # lncr 2014:1 * ; # flncr
+
+set fgfkwill 2016:2 2016:2 = gfkwill(t)
+set fgfkwill 2016:3 2017:4 = fgfkwill(t-1) + forc4(2)(t)
+graph 2; # gfkwill 2014:1 * ; # fgfkwill
+
+set fgfkbc 2016:2 2016:2 = gfkbc(t)
+set fgfkbc 2016:3 2017:4 = fgfkbc(t-1) + forc4(3)(t)
+graph 2; # gfkbc 2014:1 * ; # fgfkbc
+
+set fgfkinc 2016:2 2016:2 = gfkinc(t)
+set fgfkinc 2016:3 2017:4 = fgfkinc(t-1) + forc4(4)(t)
+graph 2; # gfkinc 2014:1 * ; # fgfkinc
+
+
+print / lncr flncr forc4(1) fdlncr
+
+set fcr 2015:1 2016:2 = exp(lncr)
+set fcr 2016:3 2017:4 = exp(flncr)
+
+comp fcr15 = fcr(2015:1) + fcr(2015:2) + fcr(2015:3) + fcr(2015:4)
+comp fcr16 = fcr(2016:1) + fcr(2016:2) + fcr(2016:3) + fcr(2016:4)
+comp fcr17 = fcr(2017:1) + fcr(2017:2) + fcr(2017:3) + fcr(2017:4)
+
+comp dfcr16 = fcr16/fcr15 - 1
+comp dfcr17 = fcr17/fcr16 - 1
+
+disp fcr15
+disp fcr16 dfcr16
+disp fcr17 dfcr17
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+****************************************************************************************************************
+**** NSA Data
+****************************************************************************************************************
+
+*** Model: AR NSA Dummy
+
+seasonal sea1 / 4 1
+seasonal sea2 / 4 2
+seasonal sea3 / 4 3
+seasonal sea4 / 4 4
+
+stwise(method=backwards,slstay=0.05,force=2,define=eqdlncnn1) DLNCNN 1981:3 * RESARN
+# constant sea1 sea2 sea3 DLNCNN{1 to 9} dum(1989:1) dum(1990:1)
+
+@autokorrelationstests(prj,static,breaktests,dfits) RESARN %regstart()-2 %regend() signif
+
+graph 1; # dlncnn 1995:1 1999:4
+
+frml(identity) lncnnfrml lncnn = lncnn(t-1) + dlncnn(t)
+frml(identity) d4lncnnfrml d4lncnn = lncnn(t) - lncnn(t-4)
+
+group lncnnmodel eqdlncnn1>>dlncnn1f lncnnfrml>>lncnn1f d4lncnnfrml>>d4lncnn1f
+
+forecast(model=lncnnmodel,from=2011:1,to=2016:2)
+graph 2; # d4lncnn 1995:1 2016:2; # d4lncnn1f
+
+
+********
+*** Model: AR NSA Differences
+
+@bjautofit(pmax=5,qmax=0,crit=AIC) d4lncnn /
+
+set noddr / = 1.0; set noddr 1989:1 1992:4 = 0.0
+
+stwise(method=backwards,slstay=0.05,force=1) D4LNCNN 1981:1 * RESARD
+# constant DLNCNN{1 to 3} D4LNCNN{1 to 5}
+equation(lastreg) dlncard
+
+@autokorrelationstests(prj,static,breaktests,dfits) RESARD %regstart()-2 %regend() signif
+
+
+****************************************************************************************************************
+****
+****************************************************************************************************************
+
+
+
+
+*******************
+*** Forc Evaluation
+*** Rolling Window Forecast Errors and Intervals
+
+
+**
+comp h      = 1
+comp window = 97
+comp model  = armodel
+**
+
+comp neq = %modelsize(model)
+comp start  = regstart   ; comp end=start+window
+comp imax   = regend-end+1-h
+*
+dec vector[vector[series]] forc(imax)
+dec vector[series] ff(neq); do n=1,neq; set ff(n) / = %NA; end do n
+dec vector[series] fe(neq); do n=1,neq; set fe(n) / = %NA; end do n
+dec vector[series] fu(neq); do n=1,neq; set fu(n) / = %NA; end do n
+dec vector[series] fl(neq); do n=1,neq; set fl(n) / = %NA; end do n
+dec vector[series] indplus(neq); do n=1,neq; set indplus(n) / = %NA; end do n
+dec vector[series] indcov(neq); do n=1,neq; set indcov(n) / = %NA; end do n
+
+dec vector[real] ssfe(neq)
+dec vector[real] mse(neq)
+dec vector[real] rmse1(neq)
+*
+
+* Constructing Forecast errors
+
+do i=1,imax
+
+   do n=1,neq
+
+      linreg(equation=%MODELEQN(model,n),noprint) * start end+i-1
+
+   end do n
+
+   *sur(model=model,noprint,nosigma) * start end+i-1
+
+   group fmodel %MODELEQN(model,1)>>fdlncons
+   *group fmodel %MODELEQN(model,1)>>fdlncr %MODELEQN(model,2)>>fdgfkwill %MODELEQN(model,3)>>fdgfkbc %MODELEQN(model,4)>>fdgfkinc gfkwillfrml>>fgfkwill gfkbcfrml>>fgfkbc gfkincfrml>>fgfkinc
+
+   forecast(model=fmodel,noprint,from=end+i,to=end+i-1+h,results=forc(i))
+
+   do n=1,neq
+      set fe(n) end+i-1+h end+i-1+h = forc(i)(n)(end+i-1+h) - %s(%l(%modeldepvars(fmodel)(n)))(end+i-1+h)
+   end do n
+
+end do i
+
+
+
+do n=1,neq
+
+   comp ssfe(n)  = %sum(fe(n).^2)
+   comp mse(n)   = ssfe(n)/imax
+   comp rmse1(n) = mse(n)^0.5
+
+   disp 'h =' h ',    n =' imax ';    RMSE =' rmse1(n) %l(%modeldepvars(fmodel)(n))
+
+end do n
+
+
+* Constructing Point and Interval Forecasts
+*
+comp pi = 0.6
+*
+
+do i=1,imax
+   do n=1,neq
+
+      set ff(n) end+i-1+h end+i-1+h = forc(i)(n)(end+i-1+h)
+      set fu(n) end+i-1+h end+i-1+h = forc(i)(n)(end+i-1+h) + %invnormal(0.5+0.5*pi)*rmse1(n)
+      set fl(n) end+i-1+h end+i-1+h = forc(i)(n)(end+i-1+h) - %invnormal(0.5+0.5*pi)*rmse1(n)
+
+   end do n
+end do i
+
+
+
+
+************
+**** Saving Forecasts for Comparison & Combination
+
+
+dec vector[series] ffar(6)
+dec vector[series] ffvecm(6)
+
+set ffar(h) = ff(1)
+*set ffvecm(h) = ff(1)
+
+************
+
+
+*open copy ffar.xlsx
+*copy(format=xlsx,org=columns) / ffar(1) ffar(2) ffar(3) ffar(4) ffar(5) ffar(6)
+
+*open copy ffvecm.xlsx
+*copy(format=xlsx,org=columns) / ffvecm(1) ffvecm(2) ffvecm(3) ffvecm(4) ffvecm(5) ffvecm(6)
+
+
+
+************
+
+
+
+
+
+****************************************************************************************************************
+**** Tests
+****************************************************************************************************************
+
+
+
+
+*****************************************************
+*** Properties of Forecast Errors
+
+*
+comp n = 1
+*
+
+*print / fe(n)
+graph(style=spike) 1; # fe(n)
+statistics fe(n) /
+
+
+
+*** Test for Forecast Optimality
+*
+comp alpha = 0.05
+*
+
+* 1. FE have zero mean
+
+disp '1. Reject H:FEmean = 0, if    |t-Stat| >' %invtcdf(1-0.5*alpha,imax-1) '(alpha =' alpha ')'
+disp '   Reject H:FE ~ Normal, if    JB-Stat >' %invchisqr(alpha,2) '(alpha =' alpha ')'
+
+* 2. 1-Step ahead FE are ~WN; h-Step ahead FE are at most ~MA(h-1)
+
+linreg fe(n) /
+# constant fe(n){1 to h}
+test
+# h+1
+# 0
+
+* 3. Sign Test
+
+set indplus(n) end+h end+imax-1+h = %if(fe(n)>0.0,1.0,0.0)
+
+statistics indplus(n) /
+
+
+* 4. Mincer-Zarnowitz
+
+linreg %modeldepvars(fmodel)(n) /
+# constant ff(n){0}
+test
+# 1 2
+# 0 1
+
+
+
+*******************************************************************************
+*** Testing Forecast Intervals
+*
+comp n = 1
+*
+
+graph 4; # %modeldepvars(fmodel)(n) 2007:1 * ; # ff(n); # fu(n); #fl(n)
+
+set indcov(n) end+h end+imax-1+h = %if(%s(%l(%modeldepvars(fmodel)(n)))<=fu(n),%if(%s(%l(%modeldepvars(fmodel)(n)))>=fl(n),1.0,0.0),0.0)
+statistics indcov(n) /
+disp 'pi =' pi
+
+
+*
+comp n1 = %sum(indcov(n))
+comp n0 = %nobs - n1
+comp nt  = n1 + n0
+comp p  = n1/nt
+*
+
+* Likelihood of the unrestricted model with empirical p
+comp lemp = (1-p)^n0 * p^n1
+
+
+* 1. LR-Test for Unconditional Coverage
+
+* Likelihood of the restricted model with p=pi
+comp lres = (1-pi)^n0 * pi^n1
+
+comp LRcov = -2*log(lres/lemp)
+disp 'LRcov =' LRcov
+disp '1. Reject H:Ind ~ Bernoulli(pi), if LRcov >' %invchisqr(alpha,1)
+
+* 2. LR-Test for Independence vs First-Order-Markov-Chain
+
+set i00 end+1+h end+imax-1+h = %if(indcov(n)(t)==0.0,%if(indcov(n)(t-1)==0.0,1.0,0.0),0.0); comp n00 = %sum(i00)
+set i11 end+1+h end+imax-1+h = %if(indcov(n)(t)==1.0,%if(indcov(n)(t-1)==1.0,1.0,0.0),0.0); comp n11 = %sum(i11)
+set i01 end+1+h end+imax-1+h = %if(indcov(n)(t)==1.0,%if(indcov(n)(t-1)==0.0,1.0,0.0),0.0); comp n01 = %sum(i01)
+set i10 end+1+h end+imax-1+h = %if(indcov(n)(t)==0.0,%if(indcov(n)(t-1)==1.0,1.0,0.0),0.0); comp n10 = %sum(i10)
+
+* Empirical transition probabilities
+comp p00 = n00/(n00+n01)
+comp p11 = n11/(n11+n10)
+comp p01 = n01/(n00+n01)
+comp p10 = n10/(n11+n10)
+
+* Likelihood of the unrestricted model with empirical transition probabilities
+comp lmc = p00^n00 * (1-p00)^n01 * (1-p11)^n10 * p11^n11
+
+comp LRind = -2*log(lemp/lmc)
+disp 'LRind =' LRind
+disp '2. Reject H:Ind ~ Independent, if LRind >' %invchisqr(alpha,1)
+disp ' '
+disp 'p11 =' p11 '; p10 =' p10
+disp 'p01 =' p01 '; p00 =' p00
+
+* 3. Joint LR-Test for Coverage and Independence
+
+comp LRci = -2*log(lres/lmc)
+disp 'LRci =' LRci
+disp '3. Reject H:Ind ~Independent&Bernoulli(pi), if LRind >' %invchisqr(alpha,2)
+
+
+
+
+
+
+*****************************************************
+*** Forecast Comparison
+
+
+open data "ffar.xlsx"
+data(format=xlsx,org=cols) 2009:2 *
+
+open data "ffvecm.xlsx"
+data(format=xlsx,org=cols) 2009:2 *
+
+graph 3; # dlncr 2007:1 *; # crar1; # crvecm1
+
+dec vector[series] ffar(6)
+dec vector[series] ffvecm(6)
+
+set ffar(1) = crar1
+set ffar(2) = crar2
+set ffar(3) = crar3
+set ffar(4) = crar4
+set ffar(5) = crar5
+set ffar(6) = crar6
+
+set ffvecm(1) = crvecm1
+set ffvecm(2) = crvecm2
+set ffvecm(3) = crvecm3
+set ffvecm(4) = crvecm4
+set ffvecm(5) = crvecm5
+set ffvecm(6) = crvecm6
+
+
+* Diebold-Mariano Test
+
+do i=1,6
+   @DMariano(modified,criterion=MSE) DLNCR ffar(i) ffvecm(i)
+end do i
+
+@DMariano(modified) DLNCR ffcrar ffcombopt
+@DMariano(modified) DLNCR ffcrar ffcombavg
+@DMariano(modified) DLNCR ffcrvecm ffcombopt
+@DMariano(modified) DLNCR ffcrvecm ffcombavg
+
+* Encompassing
+
+dec vector[series] fevecm(6)
+
+do i=1,6
+   set fevecm(i) / = DLNCR - ffvecm(i)
+end do i
+
+do i=1,6
+
+   linreg fevecm(i) /
+   # ffar(i)
+
+end do i
+
+
+*****************************************************
+*** Forecast Combination, Regression Granger, Ramanathan, Diebold
+
+* Regression Weights Combined Forecast
+
+do i=1,6
+   linreg(noprint) DLNCR /
+   # ffarx(i) ffvecm(i)
+   restrict(create) 1
+   # 1 2
+   # 1 1 1
+
+   set ffcombopt(i) 2009:2 * = %beta(1)*ffarx(i) + (1-%beta(1))*ffvecm(i)
+end do i
+
+
+do i=1,6
+   @DMariano(modified) DLNCR ffarx(i) ffcombopt(i)
+end do i
+
+do i=1,6
+   @DMariano(modified) DLNCR ffvecm(i) ffcombopt(i)
+end do i
+
+
+* Equal Weights Combined Forecast
+
+do i=1,6
+   set ffcombavg(i) 2009:2 * = (ffarx(i) + ffvecm(i))/2
+end do i
+
+do i=1,6
+   @DMariano(modified) DLNCR ffar(i) ffcombavg(i)
+end do i
+
+do i=1,6
+   @DMariano(modified) DLNCR ffvecm(i) ffcombavg(i)
+end do i
+
+
+graph(key=left) 4 ; # DLNCR 2008:1 * ; # ffcombopt(1); # ffarx(1); # ffvecm(1)
+
+
+
+*****************************************************
+*** Forecast Encompassing, Diebold Lopez 1996
+
+
+linreg DLNCR /
+# constant ffarx(1) ffvecm(1)
+test 1
+# 1 2 3
+# 0 0 1
+
+linreg DLNCR /
+# ffarx(1) ffvecm(1)
+test 1
+# 1 2
+# 0 1
+
+
+
+
+
+
+
+
+*******
+
+do i=1,imax
+   print / forc(i)(1)
+end do i
+
+set fetest 2009:3 2016:2 = forc(1) - dlncons
+
+print / forc(imax)(1) dlncons
+
+comp i=imax-1
+disp imax
+disp fe
+
+disp %datelabel(start)
+disp %datelabel(end+i-1+h)
+
+print / dlncons fe
+graph 2; # dlncons ; # ff
+
+
+report(action=define)
+report(row=new,atcol=1) fe
+report(action=show, window='mat')
+
+
+
+********
+*** VAR
+
+/*
+SYSTEM(MODEL=CVAR4)
+VARIABLES DLNCONS EUCOCONF
+LAGS 1 TO 4
+DET constant
+END(SYSTEM)
+ESTIMATE
+*/
+
+
+stwise(method=backwards,slstay=0.05,force=5) DLNCONS / RESIDS1
+# constant DLNCONS{1 to 12} EUCOCONF{1 to 12} GFKBCEXP{1 to 12} IFOCONFBAL{1 to 12}
+
+@autokorrelationstests(prj,static,breaktests,dfits) RESIDS1 %regstart()-2 %regend() signif
+
+forecast(model=CVAR4,results=fcvar4,from=2016:3,to=2017:4,window='forc')
+
+
+
+/*
+graph 1; # RESIDS1
+linreg RESIDS1 /
+# constant RESIDS1{1}
+*/
+
+
+********************************************
+
+
+
+
+
+* OLS wie Studie, alle Variablen, RESIDS als Monetary Policy Shock Series
+linreg DTARG / RESIDS
+# constant OLDTARG GRAYM GRAY0 GRAY1 GRAY2 IGRYM IGRY0 IGRY1 IGRY2 GRADM GRAD0 GRAD1 GRAD2 IGRDM IGRD0 IGRD1 IGRD2 GRAU0
+
+set zeros / = %if(RESIDS==%NA,0.0,1.0)
+@apbreaktest(smpl=zeros) DTARG /
+# %reglist()
+
+
+
+*** !! Bruch in t=136, Q1 1980
+
+
+set RESIDS / = %if(RESIDS==%NA,0.0,RESIDS)
+
+
+
+
+********
+* Model selection mit stwise
+source(noecho) "C:\Dateien\My Dropbox\Prognose\Gesamtrechnung\Modelle\src\autokorrelationstests.src"
+
+
+set ones /       = 1.0
+*@bjautofit(constant,pmax=12,qmax=12,crit=aic) DTARG
+
+
+
+
+*** Sample ohne Volcker 5.2.1980 - 2.2.1982, t <= 135 & t >= 154
+set novolcker /  = 1.0; set novolcker 136 153 = 0.0
+
+stwise(smpl=novolcker,method=backwards,slstay=0.05,force=0) DTARG / STRESIDS0
+# constant DTARG{1 to 13} OLDTARG GRAYM GRAY0 GRAY1 GRAY2 IGRYM IGRY0 IGRY1 IGRY2 GRADM GRAD0 GRAD1 GRAD2 IGRDM IGRD0 IGRD1 IGRD2 GRAU0
+
+@autokorrelationstests(prj,static,breaktests,dfits) STRESIDS0 %regstart()-2 %regend() signif
+
+
+
+
+
+*print / STRESIDS0
+*graph 2; # RESIDS / ; # STRESIDS0 /
+*graph 4; # RESIDS / ;# STRESIDS0 / ;# STRESIDS1 / ; # STRESIDS2
+
+********
+* STRESIDS in Monatsdaten
+*
+* !! wenn zwei Beobachtungen(Meetings) in einen Monat fallen, dann bilde die Summe
+* !! wenn eine Beobachtung nicht verfügbar ist, dann setze Null ein
+*
+
+
+
+* Durchgehende Reihe verfügbarer Beobachtungen (unbereinigt)
+
+*set STRESIDS / = RESIDS
+set STRESIDS / = %if(STRESIDS0<>%NA,STRESIDS0,RESIDS)
+graph 2; # RESIDS / ; # STRESIDS /
+
+
+* Bereinigt Reihe von doppelten Beobachtungen (zwei Meetings in einem Berichtsmonat)
+
+set MTGT / = MTGY + MTGM/100     ;* Generiert Datumscode YYYY.MM
+
+comp i=1
+{
+while i<=300 {
+
+   *disp i
+
+   if MTGT(i) == MTGT(i+1) {
+      set STRESIDS i i = STRESIDS(i) + STRESIDS(i+1)
+      set STRESIDS i+1 i+1 = %NA
+      set MTGY i+1 i+1 = 0.0
+      comp i=i+1
+      }
+   else
+      set STRESIDS i i = STRESIDS(i)
+
+   compute i=i+1
+   }
+}
+
+
+
+
+
+*** In Dimensionen des R&R Datensatzes
+
+calendar(m) 1966:1
+allocate 2000:12
+
+do i=1,500
+   do j=1,300
+
+      if %year(i)==MTGY(j) {
+         if %month(i)==MTGM(j)
+            set MRESIDS i i = STRESIDS(j)
+         }
+
+   end do j
+end do i
+
+set MRESIDS 1969:1 1996:12 = %if(MRESIDS==%NA,0.0,MRESIDS)
+
+
+
+
+
+
+
+
+
+
+*************************************
+*** Effects of Monetary Policy Shocks
+
+
+
+
+
+*open data "C:\Dateien\My Dropbox\Projekt Niedrigzinsphase\Text\RATS\RomerandRomerDataAppendix.xlsx"
+data(format=xlsx,org=cols,sheet='DATA BY MONTH') /
+
+set dm12 / = %if(%month(t)==12,1,0)
+smpl 1970:1 1996:12
+*print / PCIPNSA RESID dm12
+graph 2; # RESID / ; # MRESIDS /
+
+
+
+
+*** OLS mit allen Lags
+
+linreg PCIPNSA / TRANSRES
+# constant dm12{1 to 11} PCIPNSA{1 to 24} MRESIDS{1 to 36}
+comp reglabsfull = %reglabels()
+comp betafull = %beta
+
+*@autokorrelationstests(prj,breaktests,dfits,static) TRANSRES %regstart()-2 %regend() signif
+
+** !! IR viel stärker als im Original, bis -7%!!
+
+
+
+
+*** Model selection mit stwise
+
+stwise(method=backwards,slstay=0.1,force=12) PCIPNSA / TRANSRES1
+# constant dm12{1 to 11} PCIPNSA{1 to 24} MRESIDS{1 to 36}
+comp reglabsrest = %reglabels()
+comp betarest = %beta
+
+@autokorrelationstests(prj,breaktests,dfits,static) TRANSRES1 %regstart()-2 %regend() signif
+*graph 1; # TRANSRES1
+
+
+
+
+* Koeffizienten abspeichern
+
+comp fnum = %size(reglabsfull)
+comp rnum = %size(reglabsrest)
+
+comp const = 1
+comp bnum = 24       ;* Maximaler Lag von PCIPNSA in Regression
+comp cnum = 36       ;* Maximaler Lag von RESID in Regression
+comp dnum = 11
+
+
+* Inkomplettes VAR (nicht alle Lags in allen Regressoren)
+
+
+dec vector[real] coeffs(fnum)
+
+do i=1,fnum
+   do j=1,rnum
+      if reglabsfull(i) == reglabsrest(j)
+         comp coeffs(i) = betarest(j)
+   end do j
+   comp coeffs(i) = %if(coeffs(i)==%NA,0.0,coeffs(i))
+end do i
+
+
+
+
+comp d = %xsubvec(betafull,const+1,const+dnum)
+comp b = %xsubvec(betafull,const+1+dnum,const+dnum+bnum)
+comp c = %xsubvec(betafull,const+1+dnum+bnum,const+dnum+bnum+cnum)
+
+
+
+
+
+
+* Companion Matrix [A] bauen
+
+comp ynum = 2        ;* Anzahl Gleichungen im VAR
+comp pnum = 36       ;* Größte Anzahl Regressoren, hier cnum=36
+
+comp A = %zeros(ynum*pnum,ynum*pnum)
+comp AT = %zeros(ynum,ynum*pnum)
+comp ID = %identity(ynum*pnum-ynum)
+
+do i=1,pnum
+   comp AT(1,2*i-1) = %if(b(i)<>%NA,b(i),0.0)
+   comp AT(1,2*i)   = %if(c(i)<>%NA,c(i),0.0)
+end do i
+
+comp %psubmat(A,1,1,AT)          ;* inserts AT matrix into A at 1,1
+comp %psubmat(A,1+ynum,1,ID)
+
+/*
+report(action=define)
+report(row=new,atcol=1) A
+report(action=show, window='Companion Matrix A')
+*/
+
+
+
+
+
+
+***************************************************
+***   Impulse Response aus A**h
+
+***
+comp h=48
+***
+
+cal(irregular)
+set irf 1 1 = 0.0
+
+
+do i=1,h
+   comp AH = A**i
+   set irf i+1 i+1 = AH(1,2) + irf(i)
+end do i
+
+
+*print(window='Impulse Response') 1 h irf
+graph(window='Impulse Response') 1; # irf 1 h
+
+
+
+
+
+
+
+
+
+
+
+

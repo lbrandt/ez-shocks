@@ -1,0 +1,226 @@
+
+*******************
+*** Forc Evaluation
+*** Rolling Window Forecast Errors and Intervals
+
+
+**
+comp h      = 1
+comp window = 97
+comp model  = armodel
+**
+
+comp neq = %modelsize(model)
+comp start  = regstart   ; comp end=start+window
+comp imax   = regend-end+1-h
+*
+dec vector[vector[series]] forc(imax)
+dec vector[series] ff(neq); do n=1,neq; set ff(n) / = %NA; end do n
+dec vector[series] fe(neq); do n=1,neq; set fe(n) / = %NA; end do n
+dec vector[series] fu(neq); do n=1,neq; set fu(n) / = %NA; end do n
+dec vector[series] fl(neq); do n=1,neq; set fl(n) / = %NA; end do n
+dec vector[series] indplus(neq); do n=1,neq; set indplus(n) / = %NA; end do n
+dec vector[series] indcov(neq); do n=1,neq; set indcov(n) / = %NA; end do n
+
+dec vector[real] ssfe(neq)
+dec vector[real] mse(neq)
+dec vector[real] rmse1(neq)
+*
+
+* Constructing Forecast errors
+
+do i=1,imax
+
+   do n=1,neq
+
+      linreg(equation=%MODELEQN(model,n),noprint) * start end+i-1
+
+   end do n
+
+   *sur(model=model,noprint,nosigma) * start end+i-1
+
+   group fmodel %MODELEQN(model,1)>>fdlncons
+   *group fmodel %MODELEQN(model,1)>>fdlncr %MODELEQN(model,2)>>fdgfkwill %MODELEQN(model,3)>>fdgfkbc %MODELEQN(model,4)>>fdgfkinc gfkwillfrml>>fgfkwill gfkbcfrml>>fgfkbc gfkincfrml>>fgfkinc
+
+   forecast(model=fmodel,noprint,from=end+i,to=end+i-1+h,results=forc(i))
+
+   do n=1,neq
+      set fe(n) end+i-1+h end+i-1+h = forc(i)(n)(end+i-1+h) - %s(%l(%modeldepvars(fmodel)(n)))(end+i-1+h)
+   end do n
+
+end do i
+
+
+
+do n=1,neq
+
+   comp ssfe(n)  = %sum(fe(n).^2)
+   comp mse(n)   = ssfe(n)/imax
+   comp rmse1(n) = mse(n)^0.5
+
+   disp 'h =' h ',    n =' imax ';    RMSE =' rmse1(n) %l(%modeldepvars(fmodel)(n))
+
+end do n
+
+
+* Constructing Point and Interval Forecasts
+*
+comp pi = 0.6
+*
+
+do i=1,imax
+   do n=1,neq
+
+      set ff(n) end+i-1+h end+i-1+h = forc(i)(n)(end+i-1+h)
+      set fu(n) end+i-1+h end+i-1+h = forc(i)(n)(end+i-1+h) + %invnormal(0.5+0.5*pi)*rmse1(n)
+      set fl(n) end+i-1+h end+i-1+h = forc(i)(n)(end+i-1+h) - %invnormal(0.5+0.5*pi)*rmse1(n)
+
+   end do n
+end do i
+
+
+
+
+************
+**** Saving Forecasts for Comparison & Combination
+
+
+dec vector[series] ffar(6)
+dec vector[series] ffvecm(6)
+
+set ffar(h) = ff(1)
+*set ffvecm(h) = ff(1)
+
+************
+
+
+*open copy ffar.xlsx
+*copy(format=xlsx,org=columns) / ffar(1) ffar(2) ffar(3) ffar(4) ffar(5) ffar(6)
+
+*open copy ffvecm.xlsx
+*copy(format=xlsx,org=columns) / ffvecm(1) ffvecm(2) ffvecm(3) ffvecm(4) ffvecm(5) ffvecm(6)
+
+
+
+************
+
+
+
+
+
+****************************************************************************************************************
+**** Tests
+****************************************************************************************************************
+
+
+
+
+*****************************************************
+*** Properties of Forecast Errors
+
+*
+comp n = 1
+*
+
+*print / fe(n)
+graph(style=spike) 1; # fe(n)
+statistics fe(n) /
+
+
+
+*** Test for Forecast Optimality
+*
+comp alpha = 0.05
+*
+
+* 1. FE have zero mean
+
+disp '1. Reject H:FEmean = 0, if    |t-Stat| >' %invtcdf(1-0.5*alpha,imax-1) '(alpha =' alpha ')'
+disp '   Reject H:FE ~ Normal, if    JB-Stat >' %invchisqr(alpha,2) '(alpha =' alpha ')'
+
+* 2. 1-Step ahead FE are ~WN; h-Step ahead FE are at most ~MA(h-1)
+
+linreg fe(n) /
+# constant fe(n){1 to h}
+test
+# h+1
+# 0
+
+* 3. Sign Test
+
+set indplus(n) end+h end+imax-1+h = %if(fe(n)>0.0,1.0,0.0)
+
+statistics indplus(n) /
+
+
+* 4. Mincer-Zarnowitz
+
+linreg %modeldepvars(fmodel)(n) /
+# constant ff(n){0}
+test
+# 1 2
+# 0 1
+
+
+
+*******************************************************************************
+*** Testing Forecast Intervals
+*
+comp n = 1
+*
+
+graph 4; # %modeldepvars(fmodel)(n) 2007:1 * ; # ff(n); # fu(n); #fl(n)
+
+set indcov(n) end+h end+imax-1+h = %if(%s(%l(%modeldepvars(fmodel)(n)))<=fu(n),%if(%s(%l(%modeldepvars(fmodel)(n)))>=fl(n),1.0,0.0),0.0)
+statistics indcov(n) /
+disp 'pi =' pi
+
+
+*
+comp n1 = %sum(indcov(n))
+comp n0 = %nobs - n1
+comp nt  = n1 + n0
+comp p  = n1/nt
+*
+
+* Likelihood of the unrestricted model with empirical p
+comp lemp = (1-p)^n0 * p^n1
+
+
+* 1. LR-Test for Unconditional Coverage
+
+* Likelihood of the restricted model with p=pi
+comp lres = (1-pi)^n0 * pi^n1
+
+comp LRcov = -2*log(lres/lemp)
+disp 'LRcov =' LRcov
+disp '1. Reject H:Ind ~ Bernoulli(pi), if LRcov >' %invchisqr(alpha,1)
+
+* 2. LR-Test for Independence vs First-Order-Markov-Chain
+
+set i00 end+1+h end+imax-1+h = %if(indcov(n)(t)==0.0,%if(indcov(n)(t-1)==0.0,1.0,0.0),0.0); comp n00 = %sum(i00)
+set i11 end+1+h end+imax-1+h = %if(indcov(n)(t)==1.0,%if(indcov(n)(t-1)==1.0,1.0,0.0),0.0); comp n11 = %sum(i11)
+set i01 end+1+h end+imax-1+h = %if(indcov(n)(t)==1.0,%if(indcov(n)(t-1)==0.0,1.0,0.0),0.0); comp n01 = %sum(i01)
+set i10 end+1+h end+imax-1+h = %if(indcov(n)(t)==0.0,%if(indcov(n)(t-1)==1.0,1.0,0.0),0.0); comp n10 = %sum(i10)
+
+* Empirical transition probabilities
+comp p00 = n00/(n00+n01)
+comp p11 = n11/(n11+n10)
+comp p01 = n01/(n00+n01)
+comp p10 = n10/(n11+n10)
+
+* Likelihood of the unrestricted model with empirical transition probabilities
+comp lmc = p00^n00 * (1-p00)^n01 * (1-p11)^n10 * p11^n11
+
+comp LRind = -2*log(lemp/lmc)
+disp 'LRind =' LRind
+disp '2. Reject H:Ind ~ Independent, if LRind >' %invchisqr(alpha,1)
+disp ' '
+disp 'p11 =' p11 '; p10 =' p10
+disp 'p01 =' p01 '; p00 =' p00
+
+* 3. Joint LR-Test for Coverage and Independence
+
+comp LRci = -2*log(lres/lmc)
+disp 'LRci =' LRci
+disp '3. Reject H:Ind ~Independent&Bernoulli(pi), if LRind >' %invchisqr(alpha,2)
