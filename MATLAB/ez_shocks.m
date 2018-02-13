@@ -94,66 +94,12 @@ x  = h5read('ois_data.h5', '/data')';
 % wxdate = datetime(wxdstr, 'ConvertFrom', 'yyyymmdd', 'Format', 'MMM yyyy');
 % wxrate = shadowrate(:, 2);
 
-% ----------------
-% From GJ MP Shocks Database
-
-% Babecka Kucharcukova et al. (2016)
-[babShocks, ~, ~] = xlsread('gj_shocks_m.xlsx', 'bab');
-[~, bdates, ~] = xlsread('gj_shocks_m.xlsx', 'bab', 'A:A');
-babDates = datetime(bdates(3:end));
-
-% Neuenkirch (2013)
-[neuShocks, ~, ~] = xlsread('gj_shocks_m.xlsx', 'neu');
-[~, ndates, ~] = xlsread('gj_shocks_m.xlsx', 'neu', 'A:A');
-neuDates = datetime(ndates(3:end));
-
-save ez_shocks -v7.3 babDates babShocks neuDates neuShocks
-
 
 
 % ----
 % Cloyne & Huertgen
 
-% ECB MP announcements
-[ddata, ~, ~] = xlsread('ez_announce.xlsx');
-[~, dname, ~] = xlsread('ez_announce.xlsx', 'B1:D1');
-[~, ddate, ~] = xlsread('ez_announce.xlsx', 'A:A');
-
-announceDates = datetime(ddate(2:end));
-
-
-% Flip ECB announcement series
-ydate = flipud(announceDates);
-
-ta = datetime('1999-01-04');
-te = datetime('2017-12-14');
-taindex = find(ydate == ta);
-teindex = find(ydate == te);
-
-announceFull = taindex:teindex;
-
-dydate = ydate(2) - ydate(1);
-
-y = flipud(ddata);
-% Fill NaN for continuous series
-for i = 1:length(ydate)
-    for j = 1:3
-        if isnan(y(i, j))
-            y(i, j) = y(i-1, j);
-        end
-    end
-end
-
-% Plot ECB monetary policy corridor by meeting
-figure
-for i = 1:3
-    plot(ydate(:), y(:, i))
-    hold on
-end
-plot(ydate(:), zeros(1, length(ydate)), 'black') % Add zero line
-hold off
-
-
+% 1. Forecast macro data on assumed information set
 
 % Load factor model data
 load ez_data
@@ -176,59 +122,272 @@ sumeigval = cumsum(evf)/sum(evf);
 R2_static = sum(evf(1:rhat))/sum(evf);
 
 
+
 % Select variables to forecast
-selectVariables = {'EKIPTOT.G', 'EKCPHARMF', 'EMIBOR3.', 'EMM1....B'};
-y = vdata(:, findstrings(vnames, selectVariables));
+selectVariables = {'EKIPTOTG', 'EMESHARM'};
+forcvars = x(:, findstrings(names, selectVariables));
 
+mdum = (month(dates) == 12);
 
+% ----------------
+% IP Forecast Model
+dip = x(:, findstrings(names, {'EKIPTOTG'}));
 
+% Set depvar p = 3 via AIC
+%pdip = aroptlag(dip, 24, 'aic', 1, 0, 0);
 
+pdip  = 4;
 
-% Compute shock series as residual from static regression
-% Select variables for estimation
-dy = diff(y(:, 2));
-dylags = mlag(dy(:), 1);
+dipvars = [dip, Fhat];
+%corrplot(dipvars)
 
-Y = dy(announceFull);
-X = [ones(length(announceFull), 1), dylags(announceFull), ];
+% Static regression
+dipmodel = vare(dipvars, pdip);
+dipnames = char('dIP', 'F1', 'F2', 'F3', 'F4');
+prt_var(dipmodel, dipnames, fopen('varout_dip.txt', 'w'));
+plt_var(dipmodel, dipnames);
 
-% OLS
-beta = ols(Y, X, 0);
-yhat = X* beta;
-u = Y - yhat;
+[nobs, ~] = size(dipvars);
 
-plot(ydate(announceFull), u)
+hmax = 6; % Maximum forecast horizon
+tmin = 80; % Holdout sample
+nfor = nobs - tmin - hmax;
 
-
-
-% Compute shocks series from dynamic regression
-h = 1;
-window = 100;
-
-regstart = taindex;
-regstop  = regstart + window - 1;
-femax    = teindex - regstop + 1 - h;
-
-ff = zeros(femax, 1);
-fe = zeros(femax, 1);
-fu = zeros(femax, 1);
-fl = zeros(femax, 1);
-
-% Select variables for regression
-Y = dy(announceFull);
-X = [ones(length(announceFull), 1), dylags(announceFull)];
-
-for i = 0:(femax - 2)
+yh = zeros(nfor, hmax);
+ff = zeros(nfor, hmax);
+fe = zeros(nfor, hmax);
+for i = 1:nfor
     
-    sample = (regstart + i):(regstop + i); % Rolling window
-    %sample = (regstart):(regstop + i); % Expanding window
-    beta = ols(Y(sample), X(sample, :), 0);
+    fstart = tmin+i;
+    modelforc = varf(dipvars, pdip, hmax, fstart);
     
-    forc = X(sample + h, :)* beta;
-    
-    ff(i+1) = forc(end);
-    fe(i+1) = Y(regstop + i + h) - ff(i+1);
+    % Actual values of variable of interest (1)
+    actual = dipvars(fstart:fstart+hmax-1, 1);
+    for j = 1:hmax
+        yh(i, j) = actual(j);
+        ff(i, j) = modelforc(j, 1);
+        fe(i, j) = modelforc(j, 1) - actual(j);
+    end
 end
+
+plot(dates(tmin+1:tmin+nfor), fe(:, 1))
+
+
+
+% ----------------
+% Inflation Forecast Model
+%inf = x(:, findstrings(names, {'EKCPHARMF'}));
+inf = x(:, findstrings(names, {'EMESHARM'}));
+%plot(dates, inf)
+
+% Set depvar p = 12 via AIC
+%aroptlag(inf, 13, 'aic', 1, 0, 1);
+%pinf = aroptlag(inf, 24, 'aic', 1, 0, 0);
+
+pinf  = 12;
+
+infvars = [inf, Fhat];
+%corrplot(infvars)
+
+% Static regression
+infmodel = vare(infvars, pinf);
+infnames = char('Infl', 'F1', 'F2', 'F3', 'F4');
+prt_var(infmodel, infnames, fopen('varout_inf.txt', 'w'));
+plt_var(infmodel, infnames);
+
+[nobs, ~] = size(infvars);
+
+hmax = 6; % Maximum forecast horizon
+
+% Single forecast experiment
+% begf = 180; % beginning forecast period
+% fcasts = varf(infvars, pinf, hmax, begf);
+% actual = infvars(begf:begf+hmax-1,:);
+% 
+% plotstart = 160;
+% plot([infvars(plotstart:begf-1, 1); fcasts(:, 1)])
+% hold on
+% plot(infvars(plotstart:begf+hmax-1, 1))
+
+tmin = 80; % Holdout sample
+nfor = nobs - tmin - hmax;
+
+yh = zeros(nfor, hmax);
+ff = zeros(nfor, hmax);
+fe = zeros(nfor, hmax);
+for i = 1:nfor
+    
+    fstart = tmin+i;
+    modelforc = varf(infvars, pinf, hmax, fstart);
+
+    % Actual values of variable of interest (1)
+    actual = infvars(fstart:fstart+hmax-1, 1);
+    for j = 1:hmax
+        yh(i, j) = actual(j);
+        ff(i, j) = modelforc(j, 1);
+        fe(i, j) = modelforc(j, 1) - actual(j);
+    end
+end
+
+plot(dates(tmin+1:tmin+nfor), fe(:, 1))
+
+
+% 2. Match forecasts to announcement dates
+
+% ECB MP announcements
+[ddata, ~, ~] = xlsread('ez_announce.xlsx');
+[~, dname, ~] = xlsread('ez_announce.xlsx', 'B1:D1');
+[~, ddate, ~] = xlsread('ez_announce.xlsx', 'A:A');
+
+
+% Flip ECB announcement series
+announceDates = flipud(datetime(ddate(2:end), 'Format', 'yyyy-MM-dd'));
+announceRates = flipud(ddata);
+
+anum = length(announceDates);
+
+% Fill NaN for continuous series, i.e. no change
+for i = 1:anum
+    for j = 1:3
+        if isnan(announceRates(i, j))
+            announceRates(i, j) = announceRates(i-1, j);
+        end
+    end
+end
+
+% Plot ECB monetary policy corridor by meeting
+figure
+for i = 1:3
+    plot(announceDates(:), announceRates(:, i))
+    hold on
+end
+plot(announceDates(:), zeros(1, anum), 'black') % Add zero line
+hold off
+
+
+sampleStart = matchsample(announceDates, {'2006-07-06'});
+sampleDates = announceDates(sampleStart:end-2); % Start later to allow for estimation of initial forecast and match end of factor data
+sampleRates = diff(announceRates(sampleStart-1:end-2, 2)); % ECB decisions MRO
+snum = length(sampleDates);
+
+% Alter observation 2006-08-31
+sampleDates(matchsample(sampleDates, '2006-08-31')) = '2006-09-01';
+
+% Forecast series based on assumed info set at meeting date
+dipforcs = zeros(snum, hmax);
+infforcs = zeros(snum, hmax);
+for i = 1:snum
+    
+    announceMonth = dateshift(sampleDates(i), 'start', 'month');
+    announceIndex = matchsample(dates, announceMonth); % Finds index of announcement month in data set
+    dipforcvar = varf(dipvars, pdip, hmax, announceIndex);
+    infforcvar = varf(infvars, pinf, hmax, announceIndex);
+    
+    dipforcs(i, :) = dipforcvar(:, 1)';
+    infforcs(i, :) = infforcvar(:, 1)';
+end
+
+% Forecast revision, set first revision to zero
+dipforcrev = [zeros(1, hmax); diff(dipforcs)];
+infforcrev = [zeros(1, hmax); diff(infforcs)];
+
+
+% 3. Build predictor set at every meeting
+i3m = x(:, findstrings(names, {'EMIBOR3'})); % Short term interest rate
+unp = x(:, findstrings(names, {'EKESTUNPO'})); % UNP logdiffs
+
+% Match monthly data to meetings via announceIndex, i.e. x(1:index-1).
+% at meeting month m --> info(month(dates) < m)
+
+i3minfo = zeros(snum, 1);
+dipinfo = zeros(snum, 1);
+infinfo = zeros(snum, 1);
+unpinfo = zeros(snum, 3);
+for i = 1:snum
+    
+    announceMonth = dateshift(sampleDates(i), 'start', 'month');
+    announceIndex = matchsample(dates, announceMonth); % Finds index of announcement month in data set
+    
+    i3minfo(i) = i3m(announceIndex-1);
+    dipinfo(i) = dip(announceIndex-1);
+    infinfo(i) = inf(announceIndex-1);
+    unpinfo(i, :) = [unp(announceIndex-1), unp(announceIndex-2), unp(announceIndex-3)];
+end
+
+infoset = [dipforcs, infforcs, dipforcrev, infforcrev,... % Forecasts and revisions
+    i3minfo, dipinfo, infinfo, unpinfo]; % Information about general state of economy
+% How large is dataset? Feasible with sample size? If not, shorten forecast
+% horizon to 4, i.e. current month and one quarter ahead. And/or shorten
+% presample.
+
+plot(sampleDates, sampleRates)
+
+announceReg = ols(sampleRates, [ones(snum, 1), infoset]);
+prt(announceReg);
+plt(announceReg);
+
+announceShocks = announceReg.resid;
+
+
+% 4. Transform into monthly series
+
+% Reuse code from R&R replication
+sampleMonths = dateshift(sampleDates, 'start', 'month');
+mta = sampleMonths(1);
+mte = sampleMonths(end);
+mdates = (mta:calmonths(1):mte)';
+
+mT = length(mdates);
+
+shocks = announceShocks;
+mshocks = zeros(mT, 1);
+istep = 1;
+jstep = 1;
+while istep <= mT-1
+    while jstep <= snum-1
+        if month(mdates(istep)) == month(sampleDates(jstep))  % If months align,
+            mshocks(istep) = shocks(jstep);                 % assign value,
+            
+            if month(mdates(istep)) == month(sampleDates(jstep + 1))          % If also next month aligns,
+                mshocks(istep) = mshocks(istep) + shocks(jstep + 1);        % add value to previous,
+                jstep = jstep + 1;                                          % move up one meeting,
+            end
+            
+            jstep = jstep + 1;                              % and move up one meeting.
+        else                                            % If months do not align,
+            mshocks(istep) = 0;                             % assign zero,
+        end
+        istep = istep + 1;                                  % move up one month.
+    end
+    disp([istep, jstep])
+end
+% Hard code final month. How to solve in loop?
+mshocks(end) = shocks(end);
+
+% Replace NaN by zeros
+mshocks(isnan(mshocks)) = 0;
+
+
+% Save results as well as alternative shocks for exploration
+% ----------------
+% From GJ MP Shocks Database
+
+% Babecka Kucharcukova et al. (2016)
+[babShocks, ~, ~] = xlsread('gj_shocks_m.xlsx', 'bab');
+[~, bdates, ~] = xlsread('gj_shocks_m.xlsx', 'bab', 'A:A');
+babDates = datetime(bdates(3:end));
+
+% Neuenkirch (2013)
+[neuShocks, ~, ~] = xlsread('gj_shocks_m.xlsx', 'neu');
+[~, ndates, ~] = xlsread('gj_shocks_m.xlsx', 'neu', 'A:A');
+neuDates = datetime(ndates(3:end));
+
+% ----------------
+save ez_shocks -v7.3 mdates mshocks babDates babShocks neuDates neuShocks
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 
 
 
