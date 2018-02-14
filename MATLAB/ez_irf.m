@@ -134,7 +134,6 @@ hold on
 refline(0, 0)
 
 
-
 % Desired interval coverage via HAC standard errors
 coverage = 0.95;
 quantile = norm_inv(coverage);

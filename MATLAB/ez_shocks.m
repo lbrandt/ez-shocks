@@ -5,96 +5,11 @@
 %clear; clc;
 %addpath('..\R;..\MATLAB;..\..\..\Data')
 
-
-% ----------------
-% Replicate Babecka Kucharcukova et al. (2016)
-% [babShocks, ~, ~] = xlsread('gj_shocks_m.xlsx', 'bab');
-% [~, bdates, ~] = xlsread('gj_shocks_m.xlsx', 'bab', 'A:A');
-% babDates = datetime(bdates(3:end));
-
-% ----------------
-% Load data
-
-%h5disp('ez_vardata.h5')
-vdates = datetime(h5read('ez_vardata.h5', '/dates'));
-vnames = h5read('ez_vardata.h5', '/varnames');
-vdata  = h5read('ez_vardata.h5', '/data')';
-
-% Choose variables for small monetary VAR
-prices = {'EKCPHARMF', 'EMCPCOR5F', 'EKCPCOREF'};
-activity = {'EKIPMAN.G', 'EKIPTOT.G'};
-interest = {'EMPRATE.', 'EMIBOR3.', 'EMIBOR1Y'};
-money = {'EMM1....B', 'EMM2....B', 'EMM3....B'};
-exchange = {'USEURSP'};
-
-figure
-subplot(2, 2, 1)
-plot(vdates, vdata(:, findstrings(vnames, prices)))
-subplot(2, 2, 2)
-plot(vdates, vdata(:, findstrings(vnames, activity)))
-subplot(2, 2, 3)
-plot(vdates, vdata(:, findstrings(vnames, interest)))
-subplot(2, 2, 4)
-plot(vdates, vdata(:, findstrings(vnames, money)))
-
-
-selectVariables = {'EKIPMAN.G', 'EKCPHARMF', 'EMIBOR3.', 'EMM1....B'}; % Ordered like CEE1999
-y = vdata(:, findstrings(vnames, selectVariables));
-dy = diff(y);
-[T, N] = size(dy);
-
-nlag = 12;
-
-var1 = vare(dy, nlag);
-%plt_var(var1,  char(selectVariables))
-
-% Reduced form residuals in matrix
-ehat = zeros(T-nlag, N);
-for i = 1:N
-    ehat(:, i) = var1(i).resid;
-end
-
-% Covariance matrix of reduced form sigma_eta
-sigma = ehat'*ehat/(T-nlag-(N*nlag+1));
-
-% Identify contemporaneous parameter matrix via Cholesky
-chols = chol(sigma, 'lower');
-
-% Normalise diagonal of Hjj to unity
-%H = chols*diag(diag(chols).^2)^(-1/2);
-H = chols./diag(chols)';
-
-% Identify structural shocks from reduced form residuals
-epsilon = ehat*inv(H)';
-summarize(epsilon);
-plot(epsilon)
-
-
-eps2 = ehat*inv(chols)';
-summarize(eps2);
-plot(vdates((2+nlag):end), eps2)
-
-
-
-
-
-
-
-
-% Euro OIS
-%h5disp('ois_data.h5')
-dates = datetime(h5read('ois_data.h5', '/dates'));
-names = h5read('ois_data.h5', '/varnames');
-x  = h5read('ois_data.h5', '/data')';
-
-
-% % Wu & Xia (2017)
-% load ez_wxrate
-% wxdstr = str2num(strcat(num2str(shadowrate(:, 1)), num2str(15))); %#ok<ST2NM> % Suppress str2double conversion advice
-% wxdate = datetime(wxdstr, 'ConvertFrom', 'yyyymmdd', 'Format', 'MMM yyyy');
-% wxrate = shadowrate(:, 2);
-
-
+% Wu & Xia (2017)
+load ez_wxrate
+wxdstr = str2num(strcat(num2str(shadowrate(:, 1)), num2str(15))); %#ok<ST2NM> % Suppress str2double conversion advice
+wxdate = datetime(wxdstr, 'ConvertFrom', 'yyyymmdd', 'Format', 'MMM yyyy');
+wxrate = shadowrate(:, 2);
 
 % ----
 % Cloyne & Huertgen
@@ -123,20 +38,12 @@ R2_static = sum(evf(1:rhat))/sum(evf);
 
 
 
-% Select variables to forecast
-selectVariables = {'EKIPTOTG', 'EMESHARM'};
-forcvars = x(:, findstrings(names, selectVariables));
-
-mdum = (month(dates) == 12);
-
 % ----------------
 % IP Forecast Model
 dip = x(:, findstrings(names, {'EKIPTOTG'}));
 
 % Set depvar p = 3 via AIC
-%pdip = aroptlag(dip, 24, 'aic', 1, 0, 0);
-
-pdip  = 4;
+pdip = aroptlag(dip, 36, 'aic', 1, 0, 0);
 
 dipvars = [dip, Fhat];
 %corrplot(dipvars)
@@ -173,18 +80,13 @@ end
 plot(dates(tmin+1:tmin+nfor), fe(:, 1))
 
 
-
 % ----------------
 % Inflation Forecast Model
-%inf = x(:, findstrings(names, {'EKCPHARMF'}));
 inf = x(:, findstrings(names, {'EMESHARM'}));
 %plot(dates, inf)
 
-% Set depvar p = 12 via AIC
-%aroptlag(inf, 13, 'aic', 1, 0, 1);
-%pinf = aroptlag(inf, 24, 'aic', 1, 0, 0);
-
-pinf  = 12;
+% Set depvar p = 12 via HQC, AIC not stable.
+pinf = aroptlag(inf, 24, 'hqc', 1, 0, 0);
 
 infvars = [inf, Fhat];
 %corrplot(infvars)
@@ -274,6 +176,8 @@ snum = length(sampleDates);
 sampleDates(matchsample(sampleDates, '2006-08-31')) = '2006-09-01';
 
 % Forecast series based on assumed info set at meeting date
+hmax = 6;
+
 dipforcs = zeros(snum, hmax);
 infforcs = zeros(snum, hmax);
 for i = 1:snum
@@ -366,6 +270,7 @@ mshocks(end) = shocks(end);
 
 % Replace NaN by zeros
 mshocks(isnan(mshocks)) = 0;
+
 
 
 % Save results as well as alternative shocks for exploration
