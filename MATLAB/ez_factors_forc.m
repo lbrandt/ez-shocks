@@ -14,7 +14,7 @@ load ez_data
 
 %%%%
 % Find optimal number of factors according to Bai & Ng (2002)
-kmax   = 20; % Max number of factors to be extracted
+kmax   = 30; % Max number of factors to be extracted
 gnum   = 2; % ICp2 chosen in JLN2015
 demean = 2; % Standardise data
 
@@ -66,7 +66,7 @@ yt       = standardise(x);
 [T, N]   = size(yt);
 
 py       = 4; % number of depvar lags
-pz       = 2; % number of predictor lags
+pz       = 4; % number of predictor lags
 maxlag   = max(py, pz);
 
 L        = fix(4*(T/100)^(2/9)); % Newey-West lag length rule-of-thumb (N&W 1994)
@@ -75,8 +75,40 @@ ybetas   = zeros(1 + py + pz*M, N); % Parameter vectors of single equations in c
 yfit     = zeros(T - maxlag, N); % Fitted values 
 vyt      = zeros(T - maxlag, N); % Forecast errors
 
-ymodels  = zeros(1 + py + pz*M, N); % Indicator matrix of included predictors
+% LASSO model selection
+lambdavec = linspace(0, 4, 100);
+tmin = 100;
+const = 0;
+roll = 0;
 
+ylambda  = zeros(1, N);
+ymodels  = zeros(1 + py + pz*M, N); % Indicator matrix of nonzero predictors after penalisation
+for j = 1:N % Estimate system equation-by-equation
+    tic;
+    
+    X    = [ones(T, 1), mlag(yt(:, j), py), mlag(zt, pz)]; % const + py lags of depvar + pz lags of predictors
+    lambda = forcmseLambda(yt(maxlag+1:end, j), X(maxlag+1:end, :), lambdavec, tmin, const, roll); toc
+    yLasso = solveLasso(yt(maxlag+1:end, j), X(maxlag+1:end, :), lambda);
+    
+    ybetas(:, j) = yLasso.beta;
+    yfit(:, j) = yLasso.X*yLasso.beta;
+    vyt(:, j) = yLasso.y - yLasso.X*yLasso.beta;
+    
+    ylambda(1, j) = lambda;
+    ymodels(:, j) = yLasso.beta ~= 0;
+    
+    fprintf('Series %d, Elapsed Time = %0.4f \n', i, toc);
+end
+
+summarize(vyt);
+summarize(vyols);
+
+
+
+
+
+% Hard thresholding model selection
+ymodels  = zeros(1 + py + pz*M, N); % Indicator matrix of included predictors
 for j = 1:N % Estimate system equation-by-equation
     
     X    = [ones(T, 1), mlag(yt(:, j), py), mlag(zt, pz)]; % const + py lags of depvar + pz lags of predictors
