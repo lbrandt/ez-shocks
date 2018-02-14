@@ -1,4 +1,89 @@
-% Forecast Evaluation
+% Forecast Experiment
+
+% -------------------------------------------------------------------------
+% Test h = 1 and no contemporaneous regressors
+%clear; clc;
+load ez_data
+dip = x(:, findstrings(names, {'EKIPTOTG'}));
+
+plot(dates, dip)
+% Static regression
+pdip = aroptlag(dip, 36, 'aic', 1, 0, 0);
+diplags = mlag(dip, pdip);
+
+T = length(dip);
+
+dipmodel = ols(dip, [ones(T, 1), diplags]);
+%prt(dipmodel);
+plt(dipmodel);
+
+% Inputs
+y = dip(pdip+1:end);
+x = diplags(pdip+1:end, :);
+lambda = 3;
+tmin = 80; % Holdout sample
+const = 1;
+roll = 1; % Rolling window, expanding == 0
+%
+
+forclasso = forcerrorsLasso(y, x, lambda, tmin, const, roll);
+
+
+[nobs, ~] = size(y);
+[~, nreg] = size(x);
+nfor = nobs - tmin - 1;
+% Add constant to regressor matrix if required
+if const == 1
+    x = [ones(nobs, 1), x];
+end
+
+results.yh = zeros(nfor, 1);
+results.ff = zeros(nfor, 1);
+results.fe = zeros(nfor, 1);
+if roll == 1 % Rolling window
+    for i = 1:nfor    
+        wstart = i; % Window moves each iteration and has fixed length tmin
+        fstart = tmin+i;
+        
+        % Set sample for estimation
+        ywindow = y(wstart:fstart-1, :);
+        xwindow = x(wstart:fstart-1, :);
+        forcmodel = ols(ywindow, xwindow);
+        
+        % Calculate one-step-ahead model forecast at fstart
+        forcbetas = forcmodel.beta;
+        modelforc = x(fstart, :)*forcbetas;
+        
+        % Save results to structure
+        results.yh(i) = y(fstart);
+        results.ff(i) = modelforc;
+        results.fe(i) = y(fstart) - modelforc;
+    end
+elseif roll == 0 % Expanding window
+    for i = 1:nfor    
+        wstart = 1; % Always start window at 1
+        fstart = tmin+i;
+        
+        % Set sample for estimation
+        ywindow = y(wstart:fstart-1, :);
+        xwindow = x(wstart:fstart-1, :);
+        forcmodel = ols(ywindow, xwindow);
+        
+        % Calculate one-step-ahead model forecast at fstart
+        forcbetas = forcmodel.beta;
+        modelforc = x(fstart, :)*forcbetas;
+        
+        % Save results to structure
+        results.yh(i) = y(fstart);
+        results.ff(i) = modelforc;
+        results.fe(i) = y(fstart) - modelforc;
+    end
+end
+
+
+
+
+
 
 regstart = 2;
 
