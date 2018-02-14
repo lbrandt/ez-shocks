@@ -10,12 +10,11 @@ clear; clc;
 
 % Load and manipulate data in import_data. Call script here:
 load de_data
-%load gs_data
 
 
 %%%%
 % Find optimal number of factors according to Bai & Ng (2002)
-kmax   = 20; % Max number of factors to be extracted
+kmax   = 30; % Max number of factors to be extracted
 gnum   = 2; % ICp2 chosen in JLN2015
 demean = 2; % Standardise data
 
@@ -30,15 +29,10 @@ fprintf('\nFactors via IC(%d): rhat = %d \n', gnum, rhat);
 
 
 %%%% Override BNIC
-rhat = 12
-%%%%
 
 
 %%%%
 % Extract factors via PCA
-
-%[ehat1, Fhat1, lamhat1, ev1]  = jln_factors(x, kmax, gnum, demean);
-%[ehat1, Ghat1, lamhat1, ev1]  = jln_factors(x.^2, kmax, gnum, demean);
 
 [Fhat, LF, ef, evf] = factors(x, rhat, demean);
 [Ghat, LG, eg, evg] = factors(x.^2, rhat, demean);
@@ -73,7 +67,7 @@ for j = 1:N % Estimate system equation-by-equation
     
     X    = [ones(T, 1), mlag(yt(:, j), py), mlag(zt, pz)]; % const + py lags of depvar + pz lags of predictors
     reg  = nwest(yt(maxlag+1:end, j), X(maxlag+1:end, :), L);
-    pass = abs(reg.tstat(py+2:end)) > 2.575; % hard threshold 
+    pass = abs(reg.tstat(py+2:end)) > 2.575; % hard threshold
     keep = [ones(1, py+1) == 1, pass']; % always keep const, depvar lags, F1t
     Xnew = X(:, keep);
     reg  = nwest(yt(maxlag+1:end, j), Xnew(maxlag+1:end, :), L);
