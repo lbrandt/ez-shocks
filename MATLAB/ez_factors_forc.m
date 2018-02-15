@@ -8,7 +8,7 @@
 
 %clear; clc;
 
-% Load and manipulate data in import_data. Call script here:
+% Load and manipulate data in import_data. Call results here:
 load ez_data
 
 
@@ -71,23 +71,35 @@ maxlag   = max(py, pz);
 
 L        = fix(4*(T/100)^(2/9)); % Newey-West lag length rule-of-thumb (N&W 1994)
 
-ybetas   = zeros(1 + py + pz*M, N); % Parameter vectors of single equations in columns
-yfit     = zeros(T - maxlag, N); % Fitted values 
-vyt      = zeros(T - maxlag, N); % Forecast errors
 
 % LASSO model selection
-lambdavec = linspace(0, 4, 100);
+lambdamin = 0;
+lambdamax = 3;
 tmin = 100;
 const = 0;
 roll = 0;
 
-ylambda  = zeros(1, N);
-ymodels  = zeros(1 + py + pz*M, N); % Indicator matrix of nonzero predictors after penalisation
+% Set up optimisation problem
+obfunopt = optimset('TolFun', 0.01, 'TolX', 0.01); % Increase tolerance
+
+ylambda = zeros(1, N);
+ymsemin = zeros(1, N);
+ymodels = zeros(1 + py + pz*M, N); % Indicator matrix of nonzero predictors after penalisation
+ybetas  = zeros(1 + py + pz*M, N); % LASSO parameter vectors of single equations in columns
+yfit    = zeros(T - maxlag, N); % Fitted values 
+vyt     = zeros(T - maxlag, N); % Forecast errors
 for j = 1:N % Estimate system equation-by-equation
     tic;
     
     X    = [ones(T, 1), mlag(yt(:, j), py), mlag(zt, pz)]; % const + py lags of depvar + pz lags of predictors
-    lambda = forcmseLambda(yt(maxlag+1:end, j), X(maxlag+1:end, :), lambdavec, tmin, const, roll); toc
+    % Write static parameters to workspace
+    yopt = yt(maxlag+1:end, j);
+    xopt = X(maxlag+1:end, :);
+    % Find optimal lambda
+    obfunpar = @(lopt, yopt, xopt, tmin, const, roll)forcmseLasso(lopt, yopt, xopt, tmin, const, roll); % Anonymous function with all params
+    obfunlam = @(lopt)obfunpar(lopt, yopt, xopt, tmin, const, roll); % Anonymous function with only one parameter, taking other params from workspace
+    [lambda, msemin, ~, ~] = fminbnd(obfunlam, lambdamin, lambdamax, obfunopt);
+    % Estimate full model given optimal lambda
     yLasso = solveLasso(yt(maxlag+1:end, j), X(maxlag+1:end, :), lambda);
     
     ybetas(:, j) = yLasso.beta;
@@ -95,20 +107,22 @@ for j = 1:N % Estimate system equation-by-equation
     vyt(:, j) = yLasso.y - yLasso.X*yLasso.beta;
     
     ylambda(1, j) = lambda;
+    ymsemin(1, j) = msemin;
     ymodels(:, j) = yLasso.beta ~= 0;
     
-    fprintf('Series %d, Elapsed Time = %0.4f \n', i, toc);
+    fprintf('Series %d, Elapsed Time = %0.4f \n', j, toc);
 end
 
-summarize(vyt);
-summarize(vyols);
-
-
+% Compute MSE of LASSO generated prediction errors
+vymse = mean(vyt.^2);
 
 
 
 % Hard thresholding model selection
-ymodels  = zeros(1 + py + pz*M, N); % Indicator matrix of included predictors
+htmodels = zeros(1 + py + pz*M, N); % Indicator matrix of included predictors
+htbetas  = zeros(1 + py + pz*M, N); % OLS parameter vectors of single equations in columns
+htfit    = zeros(T - maxlag, N); % Fitted values 
+htvyt    = zeros(T - maxlag, N); % Forecast errors
 for j = 1:N % Estimate system equation-by-equation
     
     X    = [ones(T, 1), mlag(yt(:, j), py), mlag(zt, pz)]; % const + py lags of depvar + pz lags of predictors
@@ -118,12 +132,30 @@ for j = 1:N % Estimate system equation-by-equation
     Xnew = X(:, keep);
     reg  = nwest(yt(maxlag+1:end, j), Xnew(maxlag+1:end, :), L);
     
-    ybetas(keep, j) = reg.beta;
-    yfit(:, j)      = reg.yhat;
-    vyt(:, j)       = reg.resid;
+    htbetas(keep, j) = reg.beta;
+    htfit(:, j)      = reg.yhat;
+    htvyt(:, j)       = reg.resid;
     
-    ymodels(:, j)   = keep;
+    htmodels(:, j)   = keep;
 end
+
+% Compute MSE of LASSO generated prediction errors
+htvymse = mean(htvyt.^2);
+
+% Relative MSE efficiency of LASSO models
+remse = htvymse./vymse;
+
+% Number of nonzero parameters retained under both schemes
+yparnum = sum(ymodels);
+hparnum = sum(htmodels);
+rparnum = yparnum./hparnum;
+
+yparbar = mean(yparnum);
+hparbar = mean(hparnum);
+
+yparbar/hparbar
+
+summarize(vyt);
 
 
 % Generate AR(4) errors for Predictor set zt
@@ -150,4 +182,4 @@ end
 maxlag = max([py, pz, pf]); % Maximum lag length out of all regressions run in file
 dates = dates(1+maxlag:end);
 
-save ez_factors_forc -v7.3 dates yfit ffit ybetas fbetas vyt vft names py pz pf zt x ymodels
+save ez_factors_forc -v7.3 dates yfit ffit ybetas fbetas vyt vft names py pz pf zt x ymodels htmodels htbetas htvyt
