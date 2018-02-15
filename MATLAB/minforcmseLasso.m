@@ -1,4 +1,4 @@
-function [lambdaopt, msemin, msevec] = forcmseLambda(y, x, lambdavec, tmin, const, roll)
+function [lambdaopt, msemin, msevec] = minforcmseLasso(y, x, lambdavec, tmin, const, roll)
 % -------------------------------------------------------------------------
 % Finds optimal value for LASSO regularisation parameter lambda in a given
 % data set via a quasi out-of-sample forecast experiment. Picks that lambda
@@ -23,8 +23,6 @@ function [lambdaopt, msemin, msevec] = forcmseLambda(y, x, lambdavec, tmin, cons
 %
 % -------------------------------------------------------------------------
 M = length(lambdavec);
-lambdamin = min(lambdavec);
-lambdamax = max(lambdavec);
 
 msevec = zeros(1, M);
 for i = 1:M
