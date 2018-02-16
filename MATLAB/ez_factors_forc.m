@@ -54,6 +54,7 @@ end
 %aroptlag(Fhat(:, 1), pmax, [], 1, 0, 1);
 
 
+
 %%%%
 % Forecast
 
@@ -134,7 +135,7 @@ for j = 1:N % Estimate system equation-by-equation
     
     htbetas(keep, j) = reg.beta;
     htfit(:, j)      = reg.yhat;
-    htvyt(:, j)       = reg.resid;
+    htvyt(:, j)      = reg.resid;
     
     htmodels(:, j)   = keep;
 end
@@ -159,6 +160,8 @@ summarize(vyt);
 
 
 % Generate AR(4) errors for Predictor set zt
+
+
 [T, R]   = size(zt);
 pf       = 4;
 L        = fix(4*(T/100)^(2/9));
