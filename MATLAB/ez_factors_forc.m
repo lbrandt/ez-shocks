@@ -98,7 +98,7 @@ for j = 1:N % Estimate system equation-by-equation
     xopt = X(maxlag+1:end, :);
     % Find optimal lambda
     obfunpar = @(lopt, yopt, xopt, tmin, const, roll)forcmseLasso(lopt, yopt, xopt, tmin, const, roll); % Anonymous function with all params
-    obfunlam = @(lopt)obfunpar(lopt, yopt, xopt, tmin, const, roll); % Anonymous function with only one parameter, taking other params from workspace
+    obfunlam = @(lopt)obfunpar(lopt, yopt, xopt, tmin, const, roll); % Anonymous function with only one input, taking other params from workspace
     [lambda, msemin, ~, ~] = fminbnd(obfunlam, lambdamin, lambdamax, obfunopt);
     % Estimate full model given optimal lambda
     yLasso = solveLasso(yt(maxlag+1:end, j), X(maxlag+1:end, :), lambda);

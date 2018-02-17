@@ -67,7 +67,7 @@ uavg = selectMethod.uavg;
 ufac = selectMethod.ufac;
 uing = selectMethod.uind;
 phic = selectMethod.phic;
-%save ez_uncertainty -v7.3 dates uavg ufac uing phic
+%save ez_uncertainty -v7.3 udates uavg ufac uing phic
 
 
 % Figure from JLN2015
