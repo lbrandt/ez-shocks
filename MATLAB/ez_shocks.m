@@ -51,8 +51,8 @@ dipvars = [dip, Fhat];
 % Static regression
 dipmodel = vare(dipvars, pdip);
 dipnames = char('dIP', 'F1', 'F2', 'F3', 'F4');
-prt_var(dipmodel, dipnames, fopen('varout_dip.txt', 'w'));
-plt_var(dipmodel, dipnames);
+%prt_var(dipmodel, dipnames, fopen('varout_dip.txt', 'w'));
+%plt_var(dipmodel, dipnames);
 
 [nobs, ~] = size(dipvars);
 
@@ -94,8 +94,8 @@ infvars = [inf, Fhat];
 % Static regression
 infmodel = vare(infvars, pinf);
 infnames = char('Infl', 'F1', 'F2', 'F3', 'F4');
-prt_var(infmodel, infnames, fopen('varout_inf.txt', 'w'));
-plt_var(infmodel, infnames);
+%prt_var(infmodel, infnames, fopen('varout_inf.txt', 'w'));
+%plt_var(infmodel, infnames);
 
 [nobs, ~] = size(infvars);
 
@@ -263,7 +263,6 @@ while istep <= mT-1
         end
         istep = istep + 1;                                  % move up one month.
     end
-    disp([istep, jstep])
 end
 % Hard code final month. How to solve in loop?
 mshocks(end) = shocks(end);

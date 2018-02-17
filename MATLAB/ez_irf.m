@@ -7,134 +7,133 @@
 
 % ----------------
 % Load data
-%h5disp('ez_vardata.h5')
-vdates = datetime(h5read('ez_vardata.h5', '/dates'));
-vnames = h5read('ez_vardata.h5', '/varnames');
-vdata  = h5read('ez_vardata.h5', '/data')';
-
-% MP shocks for euro area
+load ez_data
 load ez_shocks
+load eu_uncertainty
 
-% Match sample of ez_vardata to external shocks
-bsample = matchsample(vdates, babDates);
-nsample = matchsample(vdates, neuDates);
-msample = matchsample(vdates, mdates);
+% Match sample of full data set to shorter series
+msample = matchsample(dates, mdates);
+usample = matchsample(dates, udates);
+
+bsample = matchsample(dates, babDates);
+nsample1 = matchsample(dates, neuDates);
+nsample2 = matchsample(neuDates, dates);
 
 
 
-% ----------------
-% IRF via R&R incomplete VAR regression
-sample = msample;
-shocks = mshocks;
+% Choose variables of interest from factor model dataset
+selectVariables = {'EKIPMANG', 'EKIPTOTG', 'EKCPHARMF', 'EMESHARM'};
+depvars = x(:, findstrings(names, selectVariables));
 
-% Select dependent variable IP
-depvar = diff(vdata(:, strcmp(vnames, {'EKIPTOT.G'})));
+N = length(selectVariables);
+
+% AR order of depvars
+pmax = 36;
+const = 1;
+trend = 0;
+
+picx = zeros(N, 3);
+icx = zeros(N, 3);
+for i = 1:N
+    [picx(i, 1), icx(i, 1)] = aroptlag(depvars(:, i), pmax, 'aic', const, trend, 0);
+    [picx(i, 2), icx(i, 2)] = aroptlag(depvars(:, i), pmax, 'bic', const, trend, 0);
+    [picx(i, 3), icx(i, 3)] = aroptlag(depvars(:, i), pmax, 'hqc', const, trend, 0);
+end
+
+P = zeros(1, N);
+% Lag length for economic activity unanimously suggested is p = 3.
+P(1:2) = 3;
+% Lag length for prices is not as clear. Set p = 12.
+P(3:4) = 12;
+
+
+
 
 % Monthly dummies
-mdum = (month(vdates) == 12);
+mdum = (month(dates) == 12);
+mdumlags = mlag(mdum, 11);
 
-% Lag order
-const = 1;
-dlag  = 11; 
-ylag  = 12;
-slag  = 24;
-maxlag = max([dlag, ylag, slag]);
+% ----------------
+% IRF via incomplete VAR companion form Sims (2012)
+%P = 12;
+Q = 24;
+H = 36;
 
-% Lag before sample select, such that presample counts
-mdumlags  = mlag(mdum, dlag);
-depvarlags = mlag(depvar, ylag);
-shocklags  = mlag(shocks, slag);
-
-% Matrix of independent variables
-X = [ones(length(sample), 1), mdumlags(sample, :), depvarlags(sample, :), shocklags(:, :)];
-
-% OLS
-linreg = ols(depvar(sample), X);
-
-% The estimated betas of the shock are the same as in paper. Yay!
-c = linreg.beta((const + dlag + ylag + 1):end);
-
-% Append zeros to autoregressive coeffs
-b = [linreg.beta((const + dlag + 1):((const + dlag + ylag))); zeros(maxlag - ylag, 1)];
-
-% Dimension companion matrix (incomplete VAR) for IRF
-varnum = 2;
-
-AT = zeros(varnum, varnum*maxlag);
-
-% Reorder coefficients by lag order
-for i = 1:maxlag
-    AT(1, 2*i - 1) = b(i); % Only first row because we only first variable is endogenous
-    AT(1, 2*i)     = c(i);
+compirfs = zeros(H, N);
+for i = 1:N
+    mcompanion = irf_companion(depvars(msample, i), mshocks, P(i), Q, H, [ones(length(msample), 1), mdumlags(msample, :)]);
+    compirfs(:, i) = mcompanion.irf;
 end
 
-% Build companion matrix
-A = companion(varnum, maxlag, AT);
-
-% Compute IRF of variable [varselect] w.r.t. shock [shockselect] up until horizon [hmax]
-varselect = 1;
-shockselect = 2;
-
-hmax = 36;
-
-impact = zeros(hmax, 1);
-for h = 1:hmax
-    AH = A^h;
-    impact(h) = AH(varselect, shockselect); % Impact multipliers
+figure
+for i = 1:N
+    subplot(2, 2, i)
+    plot(compirfs(:, i))
+    hold on
+    refline(0, 0)
+    title(selectVariables(i))
 end
 
-varirf = cumsum(impact);
 
-plot(varirf)
+% Test shocks EKIPTOTG only
+mcompanion = irf_companion(depvars(msample, 2), mshocks, P(2), Q, H, [ones(length(msample), 1), mdumlags(msample, :)]);
+bcompanion = irf_companion(depvars(bsample, 2), babShocks, P(2), Q, H, [ones(length(bsample), 1), mdumlags(bsample, :)]);
+ncompanion = irf_companion(depvars(nsample1, 2), neuShocks(nsample2), P(2), Q, H, [ones(length(nsample1), 1), mdumlags(nsample1, :)]);
+
+plot(mcompanion.irf)
+hold on
+plot(bcompanion.irf)
+hold on
+plot(ncompanion.irf)
+
+
 
 
 % ----------------
 % IRF via Jorda's local projection method
+controls = [ones(length(dates), 1), mdumlags];
 
-% Choose variable of interest from factor model dataset
-selectVariables = {'EKIPMAN.G', 'EKIPTOT.G', 'EKCPHARMF', 'EMCPCOR5F', 'EKCPCOREF'};
-depvar = diff(vdata(:, strcmp(vnames, {'EKIPTOT.G'})));
+jordairfs = zeros(H, N);
+for i = 1:N
+    % Construct leads and lags of dependent variable
+    yLeads = lead(depvars(:, i), H);
+    yLags  = mlag(depvars(:, i), P(i));
+    
+    mjorda = irf_jorda(yLeads(msample(1:end-H), :), yLags(msample(1:end-H), :), mshocks(1:end-H), controls(msample(1:end-H), :));
+    jordairfs(:, i) = mjorda.irf;
+end
 
-%aroptlag(depvar, 25, 'aic', 1, 0, 1);
+figure
+for i = 1:N
+    subplot(2, 2, i)
+    plot(jordairfs(:, i))
+    hold on
+    refline(0, 0)
+    title(selectVariables(i))
+end
+
+
+% Test Jorda EKIPTOTG only
+ylag = 12;
 
 % Construct leads and lags of dependent variable
-hmax = 36;
-ylag = 3;
+yLeads = lead(depvars(:, 2), H);
+yLags  = mlag(depvars(:, 2), ylag);
 
-yLeads = lead(depvar, hmax);
-yLags  = mlag(depvar, ylag);
-
-% Build set of controls
-dlag  = 11;
-ulag  = 12;
-
-mdumlags = mlag(mdum, dlag);
-%udumlags = mlag(udum(:, 1), ulag);
-
-controls = [ones(length(vdates), 1), mdumlags];
-
-% Choose lag order for NW correction
-%nlag  = fix(4*(T/100)^(2/9)); % Rule-of-thumb (N&W 1994)
-nlag = 4;
 
 % Estimate and plot IRF
-mjorda = irf_jorda(yLeads(msample(1:end-hmax), :), yLags(msample(1:end-hmax), :), mshocks(1:end-hmax), controls(msample(1:end-hmax), :), nlag);
-%wjorda = irf_jorda(yLeads(wsample, :), yLags(wsample, :), wxres, controls(wsample, :), nlag);
-bjorda = irf_jorda(yLeads(bsample(1:end-hmax), :), yLags(bsample(1:end-hmax), :), babShocks(1:end-hmax), controls(bsample(1:end-hmax), :), nlag);
-njorda = irf_jorda(yLeads(nsample(1:end-hmax), :), yLags(nsample(1:end-hmax), :), neuShocks(1:end-hmax), controls(nsample(1:end-hmax), :), nlag);
+mjorda = irf_jorda(yLeads(msample(1:end-H), :), yLags(msample(1:end-H), :), mshocks(1:end-H), controls(msample(1:end-H), :));
+bjorda = irf_jorda(yLeads(bsample(1:end-H), :), yLags(bsample(1:end-H), :), babShocks(1:end-H), controls(bsample(1:end-H), :));
+njorda = irf_jorda(yLeads(nsample1(1:end-H), :), yLags(nsample1(1:end-H), :), neuShocks(nsample2(1:end-H)), controls(nsample1(1:end-H), :));
 
 plot(mjorda.irf)
 hold on
 plot(bjorda.irf)
 hold on
 plot(njorda.irf)
-hold on
-plot(wjorda.irf)
-hold on
-refline(0, 0)
 
 
-% Desired interval coverage via HAC standard errors
+% Interval via HAC standard errors
 coverage = 0.95;
 quantile = norm_inv(coverage);
 
@@ -154,40 +153,56 @@ refline(0, 0)
 
 
 
+% ----------------
+% Compare IRF construction methods
+
+figure
+for i = 1:N
+    subplot(2, 2, i)
+    plot(jordairfs(:, i))
+    hold on
+    plot(compirfs(:, i))
+    hold on
+    refline(0, 0)
+    title(selectVariables(i))
+end
+
+
+
+
+
 % Interaction with uncertainty
 % ----------------
 % Aggregate macroeconomic uncertainty
 load ez_uncertainty
 
 % Match uncertainty to shocks
-musample = matchsample(dates, mdates);
+musample = matchsample(udates, mdates);
+[tu, hu] = size(ufac);
 
 
-% Convert uncertainty to High-U-dummies via quantiles
-Umean = mean(Ufac);
-Ustd = std(Ufac);
-udum = (Ufac >= Umean + 1*Ustd);
+umean = mean(ufac);
+ustd = std(ufac);
 
-summarize(Ufac(:, 1));
-summarize(Ufac(musample, 1));
+summarize(ufac(:, 1));
+summarize(ufac(musample, 1));
 
-tUmean = (mean(Ufac) - mean(Ufac(musample, :)))./Ustd;
+tUmean = (mean(ufac) - mean(ufac(musample, :)))./ustd;
 % ----------------
 % Center uncertainty for interaction such that average U in period
 % corresponds to no conditional effect of U on Y. Take full sample Umean as
 % difference between means is minimal and far from significance
-centeredUfac = Ufac - Umean;
-plot(centeredUfac(:, 1))
+centufac = ufac - umean;
+plot(centufac(:, 1))
 
-interaction = mshocks.*(centeredUfac(musample, 1));
+interaction = mshocks.*(centufac(musample, 1));
 plot(mshocks)
 hold on
 plot(interaction)
 
-mintshocks = [mshocks, centeredUfac(musample, 1), interaction];
+mintshocks = [mshocks, centufac(musample, 1), interaction];
 
-% Estimate IRF with interaction
-mintjorda = irf_jorda(yLeads(msample(1:end-hmax), :), yLags(msample(1:end-hmax), :), mintshocks(1:end-hmax, :), controls(msample(1:end-hmax), :), nlag);
+mintjorda = irf_jorda(yLeads(msample(1:end-H), :), yLags(msample(1:end-H), :), mintshocks(1:end-H, :), controls(msample(1:end-H), :), nlag);
 
 % Plot interaction IRF
 figure
@@ -199,19 +214,43 @@ end
 
 % ----------------
 % Standardise uncertainty for interaction 
-standardUfac = standardize(Ufac);
+standardufac = standardize(ufac);
+%plot(udates, standardufac(:, 1))
 
-plot(standardUfac(:, 1))
+mintparm = zeros(H, N, hu);
+mintparu = zeros(H, N, hu);
+for i = 1:N
+    
+    for j = 1:hu
+        
+        yLeads = lead(depvars(:, i), H);
+        yLags  = mlag(depvars(:, i), P(i));
 
-interaction = mshocks.*(standardUfac(musample, 1));
-plot(mshocks)
-hold on
-plot(interaction)
+        interaction = mshocks.*standardufac(musample, j);
+        mintshocks = [mshocks, standardufac(musample, j), interaction];
 
-mintshocks = [mshocks, standardUfac(musample, 1), interaction];
+        mintjorda = irf_jorda(yLeads(msample(1:end-H), :), yLags(msample(1:end-H), :), mintshocks(1:end-H, :), controls(msample(1:end-H), :), nlag);
+        
+        mintparm(:, i, j) = mintjorda.theta(:, 1); % Partial effect parameters
+        mintparu(:, i, j) = mintjorda.theta(:, 3); % Interaction parameters
+    end
+end
 
-% Estimate IRF with interaction
-mintjorda = irf_jorda(yLeads(msample(1:end-hmax), :), yLags(msample(1:end-hmax), :), mintshocks(1:end-hmax, :), controls(msample(1:end-hmax), :), nlag);
+mint1sigmaup = mintparm + mintparu;
+mint1sigmalo = mintparm - mintparu;
+
+
+
+% Test IRF with interaction on EKIPTOTG and ufac at h = 1
+ylag = 12;
+
+yLeads = lead(depvars(:, 2), H);
+yLags  = mlag(depvars(:, 2), ylag);
+
+interaction = mshocks.*(standardufac(musample, 1));
+mintshocks = [mshocks, standardufac(musample, 1), interaction];
+
+mintjorda = irf_jorda(yLeads(msample(1:end-H), :), yLags(msample(1:end-H), :), mintshocks(1:end-H, :), controls(msample(1:end-H), :), nlag);
 
 % Plot interaction IRF
 figure
@@ -222,9 +261,14 @@ end
 
 table(mintjorda.theta)
 
+mintirfup = mintjorda.irf(:, 1) + mintjorda.irf(:, 3);
+mintirflo = mintjorda.irf(:, 1) - mintjorda.irf(:, 3);
 
-
-
+plot(mintjorda.irf(:, 1))
+hold on
+plot(mintirfup)
+hold on
+plot(mintirflo)
 
 
 
