@@ -1,9 +1,10 @@
 % -------------------------------------------------------------------------
-% Generate forecast via factor model
+% Estimates an approximate dynamic factor model on a panel of macroeconomic
+% series in its static factor model representation. These factors are then
+% used to predict the panel series using LASSO regularised regression and
+% prediction errors are computed.
 %
-%
-%
-%
+% Lennart Brandt, Feb 2018
 % -------------------------------------------------------------------------
 
 %clear; clc;
@@ -12,7 +13,7 @@
 load ez_data
 
 
-%%%%
+% Estimate dynamic factor model -------------------------------------------
 % Find optimal number of factors according to Bai & Ng (2002)
 kmax   = 30; % Max number of factors to be extracted
 gnum   = 2; % ICp2 chosen in JLN2015
@@ -28,7 +29,6 @@ rhat = minind(bnicv); % Optimal number of factors according to lowest IC
 fprintf('\nFactors via IC(%d): rhat = %d \n', gnum, rhat);
 
 
-%%%%
 % Extract factors via PCA
 [Fhat, LF, ef, evf] = factors(x, rhat, demean);
 [Ghat, LG, eg, evg] = factors(x.^2, rhat, demean);
@@ -37,7 +37,7 @@ sumeigval = cumsum(evf)/sum(evf);
 R2_static = sum(evf(1:rhat))/sum(evf);
 
 
-% AR order of Fhat
+% Determine AR order of static factors Fhat
 pmax = 24;
 
 const = 1;
@@ -50,14 +50,11 @@ for i = 1:rhat
     [picf(i, 2), icf(i, 2)] = aroptlag(Fhat(:, i), pmax, 'bic', const, trend, 0);
     [picf(i, 3), icf(i, 3)] = aroptlag(Fhat(:, i), pmax, 'hqc', const, trend, 0);
 end
-% Maximum lag length suggested by ICs is p = 4. Err on the side of caution?
-%aroptlag(Fhat(:, 1), pmax, [], 1, 0, 1);
+% Maximum lag length suggested by ICs is p = 4.
 
 
 
-%%%%
-% Forecast
-
+% Predict macroeconomic series --------------------------------------------
 % Build predictor set
 zt       = [Fhat, Fhat(:, 1).^2, Ghat(:, 1)];
 [~, M]   = size(zt);
@@ -66,19 +63,26 @@ zt       = [Fhat, Fhat(:, 1).^2, Ghat(:, 1)];
 yt       = standardise(x);
 [T, N]   = size(yt);
 
-py       = 4; % number of depvar lags
-pz       = 4; % number of predictor lags
+% Set lag length to p = 4 for both dependent variables and predictors
+py       = 4;
+pz       = 4;
 maxlag   = max(py, pz);
 
 L        = fix(4*(T/100)^(2/9)); % Newey-West lag length rule-of-thumb (N&W 1994)
 
 
+
+
+%%%%%%%%%%%%%%%%
 % LASSO model selection
 lambdamin = 0;
 lambdamax = 3;
 tmin = 100;
 const = 0;
 roll = 0;
+
+%%%% NOTE: OPTIMISATION OVER LAMBDA IS COMPUTATIONALLY INTENSIVE, TAKES
+%%%% ABOUT ONE HOUR ON AN INTEL i5-520M @2.4GHz USING MATLAB R2017a
 
 % Set up optimisation problem
 obfunopt = optimset('TolFun', 0.01, 'TolX', 0.01); % Increase tolerance
@@ -96,7 +100,8 @@ for j = 1:N % Estimate system equation-by-equation
     % Write static parameters to workspace
     yopt = yt(maxlag+1:end, j);
     xopt = X(maxlag+1:end, :);
-    % Find optimal lambda
+    
+    % Estimate optimal lambda via out-of-sample forecast experiment
     obfunpar = @(lopt, yopt, xopt, tmin, const, roll)forcmseLasso(lopt, yopt, xopt, tmin, const, roll); % Anonymous function with all params
     obfunlam = @(lopt)obfunpar(lopt, yopt, xopt, tmin, const, roll); % Anonymous function with only one input, taking other params from workspace
     [lambda, msemin, ~, ~] = fminbnd(obfunlam, lambdamin, lambdamax, obfunopt);
@@ -111,7 +116,7 @@ for j = 1:N % Estimate system equation-by-equation
     ymsemin(1, j) = msemin;
     ymodels(:, j) = yLasso.beta ~= 0;
     
-    fprintf('Series %d, Elapsed Time = %0.4f \n', j, toc);
+    fprintf([datestr(now), ', Series %d, Elapsed Time = %0.4f \n'], j, toc);
 end
 
 % Compute MSE of LASSO generated prediction errors
@@ -119,6 +124,8 @@ vymse = mean(vyt.^2);
 
 
 
+
+%%%%%%%%%%%%%%%%
 % Hard thresholding model selection
 htmodels = zeros(1 + py + pz*M, N); % Indicator matrix of included predictors
 htbetas  = zeros(1 + py + pz*M, N); % OLS parameter vectors of single equations in columns
@@ -159,11 +166,9 @@ yparbar/hparbar
 summarize(vyt);
 
 
-% Generate AR(4) errors for Predictor set zt
-
-
+% Generate AR model errors for predictor set zt
 [T, R]   = size(zt);
-pf       = 4;
+pf       = pz;
 L        = fix(4*(T/100)^(2/9));
 
 fbetas   = zeros(1 + pf, R); % Parameter vectors of single equations in columns
@@ -185,4 +190,4 @@ end
 maxlag = max([py, pz, pf]); % Maximum lag length out of all regressions run in file
 dates = dates(1+maxlag:end);
 
-save ez_factors_forc -v7.3 dates yfit ffit ybetas fbetas vyt vft names py pz pf zt x ymodels htmodels htbetas htvyt
+save ez_factors_forc -v7.3 names dates yfit ffit ybetas fbetas vyt vft py pz pf zt x ymodels htmodels htbetas htvyt
