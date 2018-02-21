@@ -188,6 +188,6 @@ end
 %%%%
 % Save data
 maxlag = max([py, pz, pf]); % Maximum lag length out of all regressions run in file
-dates = dates(1+maxlag:end);
+udates = dates(1+maxlag:end);
 
-save ez_factors_forc -v7.3 names dates yfit ffit ybetas fbetas vyt vft py pz pf zt x ymodels htmodels htbetas htvyt
+save ez_factors_forc -v7.3 names udates yfit ffit ybetas fbetas vyt vft py pz pf zt x ymodels htmodels htbetas htvyt

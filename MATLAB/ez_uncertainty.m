@@ -30,6 +30,14 @@ hmax = 12;
 uLasso = aggregateUncertainty(sy, ty, sf, tf, ybetas, py, fbetas, pf, hmax);
 uHT = aggregateUncertainty(syht, tyht, sf, tf, htbetas, py, fbetas, pf, hmax);
 
+% Test stationarity
+test = full(uLasso.phic{1});
+[V, D, W] = eig(test);
+
+amat = [0.85, 0.3, 0.2; 0.125, 0.65, 0.05; -0.25, -0.3, 0.4];
+[V, D, W] = eig(amat);
+
+max(eig(test))
 
 % Compare methods
 
@@ -37,18 +45,18 @@ uHT = aggregateUncertainty(syht, tyht, sf, tf, htbetas, py, fbetas, pf, hmax);
 figure
 for i = 1:hmax
     subplot(4, 3, i)
-    plot(dates, uLasso.uavg(:, i))
+    plot(udates, uLasso.uavg(:, i))
     hold on
-    plot(dates, uHT.uavg(:, i))
+    plot(udates, uHT.uavg(:, i))
     title(['h = ',num2str(i)])
 end
 
 figure
 for i = 1:hmax
     subplot(4, 3, i)
-    plot(dates, uLasso.ufac(:, i))
+    plot(udates, uLasso.ufac(:, i))
     hold on
-    plot(dates, uHT.ufac(:, i))
+    plot(udates, uHT.ufac(:, i))
     title(['h = ',num2str(i)])
 end
 
@@ -58,7 +66,13 @@ ubar2 = mean(uHT.uavg);
 
 ubardiff = ubar1 - ubar2;
 
+% AR params
+tf(1, :) = tf(1, :).* (1 - tf(2, :));
+ty(1, :) = ty(1, :).* (1 - ty(2, :));
+tyht(1, :) = tyht(1, :).* (1 - tyht(2, :));
 
+mean(ty, 2)
+mean(tyht, 2)
 
 %%%%
 % Save results
@@ -67,7 +81,7 @@ uavg = selectMethod.uavg;
 ufac = selectMethod.ufac;
 uing = selectMethod.uind;
 phic = selectMethod.phic;
-%save ez_uncertainty -v7.3 udates uavg ufac uing phic
+save ez_uncertainty -v7.3 udates uavg ufac uing phic
 
 
 % Figure from JLN2015
@@ -76,7 +90,7 @@ selectH = [1, 3, 12];
 figure
 subplot(2,1,1);
 for i = selectH
-    plot(dates, uavg(:, i), 'DisplayName', ['h = ',num2str(i)])
+    plot(udates, uavg(:, i), 'DisplayName', ['h = ',num2str(i)])
     hold on
 end
 legend('show')
@@ -84,7 +98,7 @@ title('uavg')
 
 subplot(2,1,2);
 for i = selectH
-    plot(dates, ufac(:, i), 'DisplayName', ['h = ',num2str(i)])
+    plot(udates, ufac(:, i), 'DisplayName', ['h = ',num2str(i)])
     hold on
 end
 legend('show')
