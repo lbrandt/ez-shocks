@@ -1,4 +1,4 @@
-function results = generateUncertainty(sy, ty, sf, tf, ybeta, py, fbeta, pf, h)
+function results = aggregateUncertainty(sy, ty, sf, tf, ybeta, py, fbeta, pf, h)
 % -------------------------------------------------------------------------
 % Generates aggregate uncertainty embodied in a set of prediction errors
 % from a factor model together with their latent stochastic volatility.
