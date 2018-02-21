@@ -29,7 +29,7 @@ setwd(location.thisfile)
 # Set location of data relative to working directory which contains this script
 location.data = normalizePath(file.path("..", "..", "..", "Data"), winslash = "/")
 
-View(ez_data$EMGBOND.)
+
 
 
 # EZ data monthly --------------------------------------------------------

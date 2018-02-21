@@ -9,20 +9,19 @@
 % Load data
 load ez_data
 load ez_shocks
-load eu_uncertainty
+load ez_uncertainty
 
 % Match sample of full data set to shorter series
 msample = matchsample(dates, mdates);
 usample = matchsample(dates, udates);
 
-bsample = matchsample(dates, babDates);
-nsample1 = matchsample(dates, neuDates);
-nsample2 = matchsample(neuDates, dates);
-
+% Monthly dummies
+mdum = (month(dates) == 12);
+mdumlags = mlag(mdum, 11);
 
 
 % Choose variables of interest from factor model dataset
-selectVariables = {'EKIPMANG', 'EKIPTOTG', 'EKCPHARMF', 'EMESHARM'};
+selectVariables = {'EKIPTOTG', 'EMESHARM'};
 depvars = x(:, findstrings(names, selectVariables));
 
 N = length(selectVariables);
@@ -42,22 +41,22 @@ end
 
 P = zeros(1, N);
 % Lag length for economic activity unanimously suggested is p = 3.
-P(1:2) = 3;
-% Lag length for prices is not as clear. Set p = 12.
-P(3:4) = 12;
+P(1) = 3;
+% Lag length for prices is not as clear. Set p = 12 via HQC.
+P(2) = 12;
 
+% Standardise shocks such that IRF has the interpretation of the effect of
+% a unit standard deviation shock on the original scale
+mshocks = standardise(mshocks);
 
+% Maximum IRF horizon. Choose fairly short because Jorda IRF requires
+% direct forecasting H steps into the future.
+H = 36;
 
-
-% Monthly dummies
-mdum = (month(dates) == 12);
-mdumlags = mlag(mdum, 11);
 
 % ----------------
 % IRF via incomplete VAR companion form Sims (2012)
-%P = 12;
 Q = 24;
-H = 36;
 
 compirfs = zeros(H, N);
 for i = 1:N
@@ -67,24 +66,12 @@ end
 
 figure
 for i = 1:N
-    subplot(2, 2, i)
+    subplot(2, 1, i)
     plot(compirfs(:, i))
     hold on
     refline(0, 0)
     title(selectVariables(i))
 end
-
-
-% Test shocks EKIPTOTG only
-mcompanion = irf_companion(depvars(msample, 2), mshocks, P(2), Q, H, [ones(length(msample), 1), mdumlags(msample, :)]);
-bcompanion = irf_companion(depvars(bsample, 2), babShocks, P(2), Q, H, [ones(length(bsample), 1), mdumlags(bsample, :)]);
-ncompanion = irf_companion(depvars(nsample1, 2), neuShocks(nsample2), P(2), Q, H, [ones(length(nsample1), 1), mdumlags(nsample1, :)]);
-
-plot(mcompanion.irf)
-hold on
-plot(bcompanion.irf)
-hold on
-plot(ncompanion.irf)
 
 
 
@@ -105,51 +92,13 @@ end
 
 figure
 for i = 1:N
-    subplot(2, 2, i)
+    subplot(2, 1, i)
     plot(jordairfs(:, i))
     hold on
     refline(0, 0)
     title(selectVariables(i))
 end
 
-
-% Test Jorda EKIPTOTG only
-ylag = 12;
-
-% Construct leads and lags of dependent variable
-yLeads = lead(depvars(:, 2), H);
-yLags  = mlag(depvars(:, 2), ylag);
-
-
-% Estimate and plot IRF
-mjorda = irf_jorda(yLeads(msample(1:end-H), :), yLags(msample(1:end-H), :), mshocks(1:end-H), controls(msample(1:end-H), :));
-bjorda = irf_jorda(yLeads(bsample(1:end-H), :), yLags(bsample(1:end-H), :), babShocks(1:end-H), controls(bsample(1:end-H), :));
-njorda = irf_jorda(yLeads(nsample1(1:end-H), :), yLags(nsample1(1:end-H), :), neuShocks(nsample2(1:end-H)), controls(nsample1(1:end-H), :));
-
-plot(mjorda.irf)
-hold on
-plot(bjorda.irf)
-hold on
-plot(njorda.irf)
-
-
-% Interval via HAC standard errors
-coverage = 0.95;
-quantile = norm_inv(coverage);
-
-thetaup = mjorda.theta + quantile*mjorda.sigma;
-thetalo = mjorda.theta - quantile*mjorda.sigma;
-
-irfup = cumsum(thetaup);
-irflo = cumsum(thetalo);
-
-plot(mjorda.irf)
-hold on
-plot(irfup)
-hold on
-plot(irflo)
-hold on
-refline(0, 0)
 
 
 
@@ -158,7 +107,7 @@ refline(0, 0)
 
 figure
 for i = 1:N
-    subplot(2, 2, i)
+    subplot(2, 1, i)
     plot(jordairfs(:, i))
     hold on
     plot(compirfs(:, i))
@@ -168,13 +117,21 @@ for i = 1:N
 end
 
 
+plot(mdates, mshocks)
+plot(depvars(:, 2))
 
+summarize(depvars);
+
+[maxshock, maxind] = max(mshocks);
+mdates(maxind)
+
+[minirf, minind] = min(jordairfs)
 
 
 % Interaction with uncertainty
 % ----------------
 % Aggregate macroeconomic uncertainty
-load ez_uncertainty
+
 
 % Match uncertainty to shocks
 musample = matchsample(udates, mdates);
@@ -217,6 +174,7 @@ end
 standardufac = standardize(ufac);
 %plot(udates, standardufac(:, 1))
 
+nlag = 4;
 mintparm = zeros(H, N, hu);
 mintparu = zeros(H, N, hu);
 for i = 1:N
