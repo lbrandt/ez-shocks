@@ -5,14 +5,9 @@
 %clear; clc;
 %addpath('..\R;..\MATLAB;..\..\..\Data')
 
-% Wu & Xia (2017)
-load ez_wxrate
-wxdstr = str2num(strcat(num2str(shadowrate(:, 1)), num2str(15))); %#ok<ST2NM> % Suppress str2double conversion advice
-wxdate = datetime(wxdstr, 'ConvertFrom', 'yyyymmdd', 'Format', 'MMM yyyy');
-wxrate = shadowrate(:, 2);
 
 % ----
-% Cloyne & Huertgen
+% Generate monetary policy shocks
 
 % 1. Forecast macro data on assumed information set
 
@@ -51,7 +46,7 @@ dipvars = [dip, Fhat];
 % Static regression
 dipmodel = vare(dipvars, pdip);
 dipnames = char('dIP', 'F1', 'F2', 'F3', 'F4');
-%prt_var(dipmodel, dipnames, fopen('varout_dip.txt', 'w'));
+prt_var(dipmodel, dipnames, fopen('varout_dip.txt', 'w'));
 %plt_var(dipmodel, dipnames);
 
 [nobs, ~] = size(dipvars);
@@ -157,15 +152,6 @@ for i = 1:anum
     end
 end
 
-% Plot ECB monetary policy corridor by meeting
-figure
-for i = 1:3
-    plot(announceDates(:), announceRates(:, i))
-    hold on
-end
-plot(announceDates(:), zeros(1, anum), 'black') % Add zero line
-hold off
-
 
 sampleStart = matchsample(announceDates, {'2006-07-06'});
 sampleDates = announceDates(sampleStart:end-2); % Start later to allow for estimation of initial forecast and match end of factor data
@@ -196,9 +182,11 @@ dipforcrev = [zeros(1, hmax); diff(dipforcs)];
 infforcrev = [zeros(1, hmax); diff(infforcs)];
 
 
+
+
 % 3. Build predictor set at every meeting
-i3m = x(:, findstrings(names, {'EMIBOR3'})); % Short term interest rate
-unp = x(:, findstrings(names, {'EKESTUNPO'})); % UNP logdiffs
+i3m = x(:, findstrings(names, {'EMIBOR3'})); % Short term interest rate change
+unr = x(:, findstrings(names, {'EKESUNEMO'})); % Unemployment rate change
 
 % Match monthly data to meetings via announceIndex, i.e. x(1:index-1).
 % at meeting month m --> info(month(dates) < m)
@@ -206,7 +194,7 @@ unp = x(:, findstrings(names, {'EKESTUNPO'})); % UNP logdiffs
 i3minfo = zeros(snum, 1);
 dipinfo = zeros(snum, 1);
 infinfo = zeros(snum, 1);
-unpinfo = zeros(snum, 3);
+unrinfo = zeros(snum, 3);
 for i = 1:snum
     
     announceMonth = dateshift(sampleDates(i), 'start', 'month');
@@ -215,11 +203,11 @@ for i = 1:snum
     i3minfo(i) = i3m(announceIndex-1);
     dipinfo(i) = dip(announceIndex-1);
     infinfo(i) = inf(announceIndex-1);
-    unpinfo(i, :) = [unp(announceIndex-1), unp(announceIndex-2), unp(announceIndex-3)];
+    unrinfo(i, :) = [unr(announceIndex-1), unr(announceIndex-2), unr(announceIndex-3)];
 end
 
 infoset = [dipforcs, infforcs, dipforcrev, infforcrev,... % Forecasts and revisions
-    i3minfo, dipinfo, infinfo, unpinfo]; % Information about general state of economy
+    i3minfo, dipinfo, infinfo, unrinfo]; % Information about general state of economy
 % How large is dataset? Feasible with sample size? If not, shorten forecast
 % horizon to 4, i.e. current month and one quarter ahead. And/or shorten
 % presample.
@@ -272,158 +260,8 @@ mshocks(isnan(mshocks)) = 0;
 
 
 
-% Save results as well as alternative shocks for exploration
 % ----------------
-% From GJ MP Shocks Database
-
-% Babecka Kucharcukova et al. (2016)
-[babShocks, ~, ~] = xlsread('gj_shocks_m.xlsx', 'bab');
-[~, bdates, ~] = xlsread('gj_shocks_m.xlsx', 'bab', 'A:A');
-babDates = datetime(bdates(3:end));
-
-% Neuenkirch (2013)
-[neuShocks, ~, ~] = xlsread('gj_shocks_m.xlsx', 'neu');
-[~, ndates, ~] = xlsread('gj_shocks_m.xlsx', 'neu', 'A:A');
-neuDates = datetime(ndates(3:end));
-
-% ----------------
-save ez_shocks -v7.3 mdates mshocks babDates babShocks neuDates neuShocks
+% Save results 
+save ez_shocks -v7.3 mdates mshocks
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-
-
-
-% Matrix of independent variables
-X = data(sample, 5:22);
-
-% Delete NaN rows
-nanindex = any(isnan(X), 2);
-
-X(nanindex, :) = [];
-depvar(nanindex, :) = [];
-
-% OLS
-beta = ols(depvar, X, 1);
-yhat = [ones(length(X), 1), X]* beta;
-
-u = depvar - yhat;
-
-
-
-
-
-
-
-% Set R&R sample from 1969-01-14 to 1996-12-17 (FULL)
-ta = datetime('1969-01-14');
-te = datetime('1996-12-17');
-taindex = find(dates == ta);
-teindex = find(dates == te);
-
-sample = taindex:teindex;
-
-[T, N] = size(data(sample, :));
-
-% Plot change of intended target DTARG
-plot(dates(sample), data(sample, strcmp(names, {'DTARG'})))
-
-
-
-% Compute shock series as residual from equation (1)
-
-% Select variables for estimation
-depvar = data(sample, strcmp(names, {'DTARG'}));
-
-% Matrix of independent variables
-X = data(sample, 5:22);
-
-% Delete NaN rows
-nanindex = any(isnan(X), 2);
-
-X(nanindex, :) = [];
-depvar(nanindex, :) = [];
-
-% OLS
-beta = ols(depvar, X, 1);
-yhat = [ones(length(X), 1), X]* beta;
-
-u = depvar - yhat;
-
-% Reinsert NaN
-shocks = zeros(T, 1);
-step = 1;
-
-for i = 1:T
-    if nanindex(i) == 1
-        shocks(i) = NaN;
-    else
-        shocks(i) = u(step);
-        step = step + 1;
-    end
-end
-
-% Compare to R&R shocks by meeting
-figure
-plot(dates(sample), data(sample, strcmp(names, {'RESID'})))
-hold on
-plot(dates(sample), shocks)
-
-
-% Transform into monthly series and sum if several meetings in same month
-mta = dateshift(ta, 'start', 'month');
-mte = dateshift(te, 'start', 'month');
-mdates = (mta:calmonths(1):mte)';
-
-mT = length(mdates);
-
-mshocks = zeros(mT, 1);
-istep = 1;
-jstep = 1;
-
-while istep <= mT-1
-    
-    while jstep <= T-1
-        if month(mdates(istep)) == month(dates(jstep))  % If months align,
-            mshocks(istep) = shocks(jstep);                 % assign value,
-            
-            if month(mdates(istep)) == month(dates(jstep + 1))          % If also next month aligns,
-                mshocks(istep) = mshocks(istep) + shocks(jstep + 1);        % add value to previous,
-                jstep = jstep + 1;                                          % move up one meeting,
-            end
-            
-            jstep = jstep + 1;                              % and move up one meeting.
-        else                                            % If months do not align,
-            mshocks(istep) = 0;                             % assign zero,
-        end
-            
-        istep = istep + 1;                          % move up one month.
-    end   
-end
-% Hard code final month. How to solve in loop?
-mshocks(end) = shocks(end);
-
-% Replace NaN by zeros
-mshocks(isnan(mshocks)) = 0;
-
-save rr_shocks -v7.3 mdates mshocks
-
-%%%%
-% Historically implemented FFR
-ffrpath = 'C:\Dateien\Dropbox\Lennart\Thesis\Data\ffr.xls';
-
-[ffr, ~, ~] = xlsread(ffrpath);
-[~, ffrdates, ~] = xlsread(ffrpath, 'A:A');
-
-ffrdates = datetime(ffrdates(12:end));
-
-ffrtaindex = find(ffrdates == ta);
-ffrteindex = find(ffrdates == te);
-
-ffrsample = ffrtaindex:ffrteindex;
-
-
-
-
-
