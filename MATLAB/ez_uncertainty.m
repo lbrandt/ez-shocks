@@ -79,9 +79,9 @@ mean(tyht, 2)
 selectMethod = uLasso;
 uavg = selectMethod.uavg;
 ufac = selectMethod.ufac;
-uing = selectMethod.uind;
+uind = selectMethod.uind;
 phic = selectMethod.phic;
-save ez_uncertainty -v7.3 udates uavg ufac uing phic
+save ez_uncertainty -v7.3 udates uavg ufac uind phic
 
 
 % Figure from JLN2015

@@ -12,19 +12,94 @@ load ez_uncertainty
 load de_uncertainty
 load gs_uncertainty
 
-which
-plot(Uind)
-
-utcsa1 = squeeze(mean(jlnut,2));
-%isequal(utcsa, utcsa1) % Why different? utcsa should be "correct" though.
-
 %%%%
 % Descriptive statistics
-%jlndesc = summarize(utcsa);
-%usdesc1 = summarize(Uavg);
-%usdesc2 = summarize(Ufac);
+ulognorm = log(uind.^2); % Normal
 
-%array2table([jlndesc, usdesc1, usdesc2], 'VariableNames', {'N', 'mean', 'sd', 'min', 'max'});
+ulognormavg = squeeze(mean(ulognorm,2)); % Normal
+summarize(ulognormavg);
+histogram(ulognormavg(:, 1))
+
+expuavg = exp(ulognormavg); % LogNormal
+summarize(expuavg);
+
+expuavg2 = expuavg.^2; % ??
+summarize(expuavg2);
+
+
+upca2 = factors(uind(:, :, 1), 1, 2);
+
+summarize(upca2);
+
+
+[T, N, h] = size(uind(:, :, :));
+% Correct aggu?
+logu = log(uind.^2); % Normal
+loguavg = squeeze(mean(logu,2)); % Normal
+uavg2 = exp(loguavg);
+uavg3 = sqrt(uavg2);
+
+
+histogram(uavg2(:, 1))
+[jbdecision, ~,jbstat, jbcrit] = jbtest(uavg2(:, 1))
+
+
+
+ufac1 = zeros(T, h); % Normal
+ufac2 = zeros(T, h); % LogNormal
+ufac3 = zeros(T, h); % ?
+upca = zeros(T, h); % Normal
+for i = 1:h
+    upca(:, i) = factors(logu(:, :, i), 1, 2); % Normal?
+    
+    % Flip ufac if necessary
+    rho = corrcoef(upca(:, i), loguavg(:, i));
+    if rho(2, 1) < 0
+        upca = -upca;
+    end
+    
+    % Scale to Uavg
+    ufac1(:, i) = standardise(upca(:, i))* std(loguavg(:, i)) + mean(loguavg(:, i));
+    ufac2(:, i) = exp(ufac1(:, i));
+    ufac3(:, i) = sqrt(ufac2(:, i));
+end
+
+summarize(uavg);
+
+uavg4 = exp(0.5*loguavg);
+
+plot(standardise(uavg(:, 1)))
+hold on
+plot(loguavg(:, 1)) % Normal
+hold on
+plot(uavg2(:, 1))
+hold on
+plot(uavg3(:, 1))
+hold on
+plot(uavg4(:, 1))
+
+plot(upca(:, 1));
+hold on
+plot(ufac1(:, 1))
+hold on
+plot(ufac2(:, 1))
+hold on
+plot(ufac3(:, 1))
+
+plot(loguavg(:, 1)) % Normal
+hold on
+plot(ufac1(:, 1))
+
+plot(uavg2(:, 1)) % LogNormal
+hold on
+plot(ufac2(:, 1))
+
+plot(uavg3(:, 1)) % ??
+hold on
+plot(ufac3(:, 1))
+
+
+
 
 %%%%
 % Diagram from JLN 2015
@@ -58,7 +133,7 @@ vselect = 2;
 
 figure
 for i = 1:hselect
-    plot(dates, Uind(:, vselect, i))
+    plot(dates, uind(:, vselect, i))
     hold on
 end
 
@@ -91,7 +166,7 @@ for i = 1:hselect
     title(['h = ',num2str(i)])
 end
 
-summarize(Uavg)
+
 % Does it hold that U is larger for larger h?
 tselect = 150;
 vselect = 1:9;

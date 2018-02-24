@@ -149,4 +149,23 @@ for i = 1:h
     results.ufac(:, i) = exp( standardise(upca(:, i))* std(log(results.uavg(:, i))) + mean(log(results.uavg(:, i))) );
 end
 
+
+% Correct scaling?
+loguavg2 = squeeze(mean(logu,2));
+results.uavg2 = sqrt(exp(loguavg2));
+results.ufac2 = zeros(T, h);
+upca = zeros(T, h);
+for i = 1:h
+    upca(:, i) = factors(logu(:, :, i), 1, 2);
+    
+    % Flip ufac if necessary
+    rho = corrcoef(upca(:, i), loguavg2(:, i));
+    if rho(2, 1) < 0
+        upca = -upca;
+    end
+    
+    % Scale to Uavg
+    results.ufac2(:, i) = sqrt(exp( standardise(upca(:, i))* std(loguavg2(:, i)) + mean(loguavg2(:, i))));
+end
+
 end
