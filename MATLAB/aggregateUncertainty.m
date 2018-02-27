@@ -128,12 +128,18 @@ results.uind = sqrt(ut);
 
 %%%%
 % Aggregate individual uncertainty
-% Simple average
-results.uavg = squeeze(mean(results.uind,2));
 
-% Principal component analysis on logged variances
+% Scale to log of squared volatility
 logu = log(ut(:, :, :));
 
+% Simple average
+loguavg2 = squeeze(mean(logu,2));
+
+% Scale back to flat volatility
+results.uavg = sqrt(exp(loguavg2));
+
+
+% Principal component analysis on log scale
 results.ufac = zeros(T, h);
 upca = zeros(T, h);
 for i = 1:h
@@ -146,26 +152,7 @@ for i = 1:h
     end
     
     % Scale to Uavg
-    results.ufac(:, i) = exp( standardise(upca(:, i))* std(log(results.uavg(:, i))) + mean(log(results.uavg(:, i))) );
-end
-
-
-% Correct scaling?
-loguavg2 = squeeze(mean(logu,2));
-results.uavg2 = sqrt(exp(loguavg2));
-results.ufac2 = zeros(T, h);
-upca = zeros(T, h);
-for i = 1:h
-    upca(:, i) = factors(logu(:, :, i), 1, 2);
-    
-    % Flip ufac if necessary
-    rho = corrcoef(upca(:, i), loguavg2(:, i));
-    if rho(2, 1) < 0
-        upca = -upca;
-    end
-    
-    % Scale to Uavg
-    results.ufac2(:, i) = sqrt(exp( standardise(upca(:, i))* std(loguavg2(:, i)) + mean(loguavg2(:, i))));
+    results.ufac(:, i) = sqrt(exp( standardise(upca(:, i))* std(loguavg2(:, i)) + mean(loguavg2(:, i))));
 end
 
 end

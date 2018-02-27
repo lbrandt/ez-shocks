@@ -145,34 +145,15 @@ summarize(ufac(:, 1));
 summarize(ufac(musample, 1));
 
 tUmean = (mean(ufac) - mean(ufac(musample, :)))./ustd;
-% ----------------
-% Center uncertainty for interaction such that average U in period
-% corresponds to no conditional effect of U on Y. Take full sample Umean as
-% difference between means is minimal and far from significance
-centufac = ufac - umean;
-plot(centufac(:, 1))
 
-interaction = mshocks.*(centufac(musample, 1));
-plot(mshocks)
-hold on
-plot(interaction)
-
-mintshocks = [mshocks, centufac(musample, 1), interaction];
-
-mintjorda = irf_jorda(yLeads(msample(1:end-H), :), yLags(msample(1:end-H), :), mintshocks(1:end-H, :), controls(msample(1:end-H), :), nlag);
-
-% Plot interaction IRF
-figure
-for i = 1:3
-    subplot(3, 1, i)
-    plot(mintjorda.irf(:, i))
-end
 
 
 % ----------------
-% Standardise uncertainty for interaction 
+% Standardise uncertainty for interaction such that average U in period
+% corresponds to no conditional effect of U on Y. Also, U_t = 1 means that
+% U was one SD above mean on impact.
 standardufac = standardize(ufac);
-%plot(udates, standardufac(:, 1))
+
 
 nlag = 4;
 mintparm = zeros(H, N, hu);
@@ -210,12 +191,19 @@ mintshocks = [mshocks, standardufac(musample, 1), interaction];
 
 mintjorda = irf_jorda(yLeads(msample(1:end-H), :), yLags(msample(1:end-H), :), mintshocks(1:end-H, :), controls(msample(1:end-H), :), nlag);
 
-% Plot interaction IRF
+% Plot interaction IRF at U_t = 1, i.e. one standard deviation
+mintsum = mintjorda.irf(:, 1) + mintjorda.irf(:, 3);
+
+plot(mintsum)
+
+% Plot decomposed IRF
 figure
 for i = 1:3
     subplot(3, 1, i)
     plot(mintjorda.irf(:, i))
 end
+
+
 
 table(mintjorda.theta)
 
